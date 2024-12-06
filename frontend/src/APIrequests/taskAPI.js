@@ -21,7 +21,7 @@ export const taskDetailsApi = async (taskId) => {
 };
 
 export const updateTaskApi = async (updateData) => {
-  const { data } = await axios.put(
+  const { data } = await axios.patch(
     `${baseUrl}/${updateData?.taskId}`,
     updateData,
     {

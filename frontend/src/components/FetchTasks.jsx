@@ -1,10 +1,15 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchTasksApi } from "../APIrequests/taskAPI";
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { fetchTasksApi, updateTaskApi } from "../APIrequests/taskAPI";
 import { fetchCategoriesApi } from "../APIrequests/categoryAPI";
 import { fetchSubCategoriesApi } from "../APIrequests/subCategoryAPI";
+// import * as Yup from "yup";
+// import { useFormik } from "formik";
+// import { useParams } from "react-router-dom";
 
 const FetchTask = () => {
+  const [editingRowId, setEditingRowId] = useState(null);
+  const [editValues, setEditValues] = useState({});
   const [filters, setFilters] = useState({
     category: "",
     subCategory: "",
@@ -12,7 +17,12 @@ const FetchTask = () => {
     isApproved: "",
     isPaid: "",
     isCompleted: "",
+    startDate: "",
+    endDate: "",
   });
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // const { taskId } = useParams();
 
   const {
     isLoading: isTasksLoading,
@@ -36,20 +46,49 @@ const FetchTask = () => {
     queryFn: fetchSubCategoriesApi,
   });
 
-  // Refetch tasks whenever filters change
-  useEffect(() => {
-    taskRefetch();
-  }, [filters, taskRefetch]);
+  const taskMutation = useMutation({
+    mutationKey: ["updateTask"],
+    mutationFn: updateTaskApi,
+    onSuccess: () => {
+      setEditingRowId(null);
+      taskRefetch();
+    },
+  });
+
+  const handleEditChange = (key, value) => {
+    setEditValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const startEditing = (task) => {
+    setEditingRowId(task._id);
+    setEditValues({
+      isApproved: task.isApproved,
+      isPaid: task.isPaid,
+      isCompleted: task.isCompleted,
+    });
+  };
+
+  const saveChanges = () => {
+    const updateData = {
+      ...editValues,
+      taskId: editingRowId,
+    };
+    taskMutation.mutate(updateData);
+  };
+
+  const cancelEditing = () => {
+    setEditingRowId(null);
+    setEditValues({});
+  };
 
   const handleFilterChange = (key, value) => {
     setFilters((prevFilters) => ({ ...prevFilters, [key]: value }));
   };
 
-  const [searchTerm, setSearchTerm] = useState("");
-  //handle search handler
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setFilters({ ...filters, title: searchTerm });
@@ -65,6 +104,8 @@ const FetchTask = () => {
       isApproved: "",
       isPaid: "",
       isCompleted: "",
+      startDate: "",
+      endDate: "",
     });
   };
 
@@ -73,9 +114,9 @@ const FetchTask = () => {
     return <h2>Error: {tasksError.message || "Something went wrong"}</h2>;
   if (!tasksData?.data?.tasks?.length) return <h2>No tasks found</h2>;
 
-  const tasks = tasksData?.data?.tasks;
-  const categories = categoriesData?.data?.categories;
-  const subCategories = subCategoriesData?.data?.subCategories;
+  const tasks = tasksData?.data?.tasks || [];
+  const categories = categoriesData?.data?.categories || [];
+  const subCategories = subCategoriesData?.data?.subCategories || [];
 
   return (
     <div className="mt-24 lg:mt-28">
@@ -87,7 +128,7 @@ const FetchTask = () => {
             placeholder="Search by title"
             value={searchTerm}
             onChange={handleSearchChange}
-            className="border p-2 rounded"
+            className="border p-2 rounded flex justify-between w-1/2 md:w-1/4"
           />
           <select
             value={filters.category}
@@ -113,12 +154,32 @@ const FetchTask = () => {
               </option>
             ))}
           </select>
+          <div className="flex items-center gap-2">
+            <label htmlFor="from">From:</label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange("startDate", e.target.value)}
+              className="border p-2 rounded"
+              name="from"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="to">To:</label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange("endDate", e.target.value)}
+              className="border p-2 rounded"
+              name="to"
+            />
+          </div>
           <select
             value={filters.isApproved}
             onChange={(e) => handleFilterChange("isApproved", e.target.value)}
             className="border p-2 rounded"
           >
-            <option value="">Approval Status</option>
+            <option value="">All</option>
             <option value="true">Approved</option>
             <option value="false">Pending</option>
           </select>
@@ -127,7 +188,7 @@ const FetchTask = () => {
             onChange={(e) => handleFilterChange("isPaid", e.target.value)}
             className="border p-2 rounded"
           >
-            <option value="">Payment Status</option>
+            <option value="">All</option>
             <option value="true">Paid</option>
             <option value="false">Pending</option>
           </select>
@@ -136,7 +197,7 @@ const FetchTask = () => {
             onChange={(e) => handleFilterChange("isCompleted", e.target.value)}
             className="border p-2 rounded"
           >
-            <option value="">Completion Status</option>
+            <option value="">All</option>
             <option value="true">Completed</option>
             <option value="false">Pending</option>
           </select>
@@ -160,17 +221,20 @@ const FetchTask = () => {
       <table className="min-w-full border-collapse border border-gray-300">
         <thead>
           <tr className="bg-gray-200">
+            <th className="border px-1 py-2">S/N</th>
             <th className="border px-4 py-2">Title</th>
             <th className="border px-4 py-2">Category</th>
             <th className="border px-4 py-2">SubCategory</th>
             <th className="border px-4 py-2">Approved</th>
             <th className="border px-4 py-2">Paid</th>
             <th className="border px-4 py-2">Completed</th>
+            <th className="border px-4 py-2">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {tasks.map((task) => (
+          {tasks.map((task, index) => (
             <tr key={task._id} className="hover:bg-gray-100">
+              <td className="border px-1 py-2">{index + 1}</td>
               <td className="border px-4 py-2">{task.title}</td>
               <td className="border px-4 py-2">
                 {task.category?.category || "Uncategorized"}
@@ -179,11 +243,80 @@ const FetchTask = () => {
                 {task.subCategory?.title || "Uncategorized"}
               </td>
               <td className="border px-4 py-2">
-                {task.isApproved ? "Yes" : "No"}
+                {editingRowId === task._id ? (
+                  <select
+                    value={editValues.isApproved}
+                    onChange={(e) =>
+                      handleEditChange("isApproved", e.target.value === "true")
+                    }
+                  >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                ) : task.isApproved ? (
+                  "Yes"
+                ) : (
+                  "No"
+                )}
               </td>
-              <td className="border px-4 py-2">{task.isPaid ? "Yes" : "No"}</td>
               <td className="border px-4 py-2">
-                {task.isCompleted ? "Yes" : "No"}
+                {editingRowId === task._id ? (
+                  <select
+                    value={editValues.isPaid}
+                    onChange={(e) =>
+                      handleEditChange("isPaid", e.target.value === "true")
+                    }
+                  >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                ) : task.isPaid ? (
+                  "Yes"
+                ) : (
+                  "No"
+                )}
+              </td>
+              <td className="border px-4 py-2">
+                {editingRowId === task._id ? (
+                  <select
+                    value={editValues.isCompleted}
+                    onChange={(e) =>
+                      handleEditChange("isCompleted", e.target.value === "true")
+                    }
+                  >
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                ) : task.isCompleted ? (
+                  "Yes"
+                ) : (
+                  "No"
+                )}
+              </td>
+              <td className="border px-4 py-2">
+                {editingRowId === task._id ? (
+                  <>
+                    <button
+                      onClick={saveChanges}
+                      className="bg-green-500 text-white px-2 py-1 rounded mr-2"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="bg-gray-500 text-white px-2 py-1 rounded"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => startEditing(task)}
+                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                  >
+                    Edit
+                  </button>
+                )}
               </td>
             </tr>
           ))}

@@ -9,7 +9,7 @@ taskRouter
   .post("/create", taskController.createTask)
   .get("/", taskController.fetchAllTasks)
   .get("/:taskId", taskController.fetchOneTask)
-  .put("/tasks/:taskId", isAuthenticated, taskController.updateTask)
+  .patch("/:taskId", isAuthenticated, taskController.updateTask)
   .delete("/:taskId", isAuthenticated, taskController.deleteTask);
 
 export default taskRouter;

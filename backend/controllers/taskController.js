@@ -73,38 +73,56 @@ const taskController = {
 
   // Fetch all tasks
   fetchAllTasks: asyncHandler(async (req, res) => {
-    const { category, subCategory, title, isApproved, isPaid, isCompleted } =
-      req.query;
-    //Basic filter
+    const {
+      category,
+      subCategory,
+      title,
+      isApproved,
+      isPaid,
+      isCompleted,
+      startDate,
+      endDate,
+    } = req.query;
+
+    // Basic filter
     let filter = {};
     if (category) {
       filter.category = category;
     }
-
     if (subCategory) {
       filter.subCategory = subCategory;
     }
     if (title) {
-      filter.title = { $regex: title, $options: "i" }; //case insensitive
+      filter.title = { $regex: title, $options: "i" }; // case insensitive
     }
     if (isApproved) {
       filter.isApproved = isApproved;
     }
-
     if (isPaid) {
       filter.isPaid = isPaid;
     }
-
     if (isCompleted) {
       filter.isCompleted = isCompleted;
     }
 
+    // Date filter
+    if (startDate || endDate) {
+      filter.updatedAt = {};
+      if (startDate) {
+        filter.updatedAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        filter.updatedAt.$lte = new Date(endDate);
+      }
+    }
+
     try {
-      // const totalTasks = await Task.countDocuments(filter);
+      // Fetch tasks based on the filter
       const tasks = await Task.find(filter)
         .populate("category")
         .populate("subCategory")
         .sort({ updatedAt: -1 });
+
       return sendResponse(res, 200, "success", "Tasks fetched successfully", {
         tasks,
       });
@@ -160,12 +178,11 @@ const taskController = {
       const taskUpdated = await Task.findByIdAndUpdate(
         taskId,
         {
-          description: req.body.description,
           isApproved: req.body.isApproved,
           isPaid: req.body.isPaid,
           isCompleted: req.body.isCompleted,
         },
-        { new: true }
+        // { new: true }
       );
 
       return sendResponse(res, 200, "success", "Task updated successfully", {

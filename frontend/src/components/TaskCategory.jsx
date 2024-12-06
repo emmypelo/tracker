@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 
-const PostCategory = ({ categories, onCategorySelect, onClearFilters }) => {
+const TaskCategory = ({ categories, onCategorySelect, onClearFilters }) => {
   return (
     <div className="flex flex-wrap gap-2 mb-10">
       {/* All Articles Category */}
@@ -24,4 +24,4 @@ const PostCategory = ({ categories, onCategorySelect, onClearFilters }) => {
   );
 };
 
-export default PostCategory;
+export default TaskCategory;
