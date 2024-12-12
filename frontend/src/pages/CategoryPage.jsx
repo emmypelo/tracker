@@ -3,8 +3,8 @@ import AddSubCategory from "../components/AddSubCategory";
 
 const CategoryPage = () => {
   return (
-    <div className="flex flex-col md:flex-row justify-around items-center min-h-screen">
-      <AddCategory />;
+    <div className="flex flex-col md:flex-row gap-4 justify-around items-center min-h-screen mx-1">
+      <AddCategory />
       <AddSubCategory />
     </div>
   );

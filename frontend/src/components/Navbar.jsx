@@ -1,9 +1,12 @@
+
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { checkAuthApi, logoutApi } from "../APIrequests/userAPI";
 import { login, logout } from "../redux/slices/authSlices";
+import logo from "../images/logo.png";
+import { FaSignOutAlt, FaUser } from "react-icons/fa";
 
 const Navbar = () => {
   const dispatch = useDispatch();
@@ -35,28 +38,24 @@ const Navbar = () => {
   };
 
   const name =
-    userAuth?.data?.firstname + " " + userAuth?.data?.lastname.slice(0, 1);
+    userAuth?.data?.firstname.slice(0, 1) +
+    " " +
+    userAuth?.data?.lastname.slice(0, 1);
 
   return (
-    <nav className="w-full h-16 fixed top-0 bg-gray-900 z-10 flex items-center justify-between px-6">
-      <div>
-        <h2 className="text-white">LOGO</h2>
+    <nav className="w-full h-[4.5rem] fixed top-0 bg-gray-800 z-10 flex items-center justify-between px-4">
+      <div className="h-full w-[12%] flex items-center">
+        <img
+          src={logo}
+          alt="logo"
+          className="max-w-full max-h-full object-contain"
+        />
       </div>
-      <div className="CTA">
-        <ul className="text-white flex gap-4">
+      <div className="CTA w-[70%] lg:w-[20%] md:w-[40%] mx-auto flex justify-center ">
+        <ul className="text-white flex justify-center md:justify-between gap-4 w-full text-base md:text-lg">
           <li>
             <Link to="/" className="hover:text-gray-400">
-              Home
-            </Link>
-          </li>
-          <li>
-            <Link to="/new-request" className="hover:text-gray-400">
-              New Request
-            </Link>
-          </li>
-          <li>
-            <Link to="/my-requests" className="hover:text-gray-400">
-              My Requests
+              Requests
             </Link>
           </li>
           <li>
@@ -64,19 +63,29 @@ const Navbar = () => {
               Reports
             </Link>
           </li>
+          <li>
+            <Link to="/addcategory" className="hover:text-gray-400">
+              Category
+            </Link>
+          </li>
         </ul>
       </div>
-      <div className="auth">
+      <div className="auth w-1/5 flex justify-end items-center">
         {userAuth ? (
-          <div className="flex gap-2">
-            {" "}
-            <p className="text-white">{name}</p>
-            <p
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col items-center gap-1 rounded-full border border-yellow-500 w-[3rem] h-[3rem] justify-center">
+              <FaUser fill="white" />
+              <p className="text-white">{name}</p>
+            </div>
+            <div
+              className="flex flex-col items-center gap-1 cursor-pointer"
               onClick={handleLogout}
-              className="transition-all px-1  font-semibold text-slate-100 duration-300 ease-in-out hover:bg-slate-700 hover:text-white cursor-pointer"
             >
-              Logout
-            </p>
+              <FaSignOutAlt fill="white" />
+              <p className="text-slate-100 group-hover:text-yellow-300 transition duration-300 ease-in-out">
+                Logout
+              </p>
+            </div>
           </div>
         ) : (
           <Link

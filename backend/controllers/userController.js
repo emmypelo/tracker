@@ -5,7 +5,9 @@ import bcrypt from "bcryptjs";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import passport from "passport";
+import crypto from "crypto";
 import User from "../models/User.js";
+import sendPasswordMail from "../utilities/sendPasswordMail.js";
 
 // Helper function for sending consistent API responses
 const sendResponse = (
@@ -162,6 +164,98 @@ const userController = {
   logout: asyncHandler(async (req, res) => {
     res.cookie("TrackIt", "", { maxAge: 1 }); // Expire cookie immediately
     return sendResponse(res, 200, "success", "Logged out successfully");
+  }),
+
+  //! forgot password (sending email token)
+  forgotPassword: asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    try {
+      // find the user
+      const user = await User.findOne({ email });
+      if (!user) {
+        return sendResponse(
+          res,
+          404,
+          "error",
+          `User with email ${email} is not found `
+        );
+      }
+
+      //use the method from the model
+      const token = await user.generatePasswordResetToken();
+      //resave the user
+      await user.save();
+      //send the email
+      await sendPasswordMail(user.email, token);
+
+      return sendResponse(
+        res,
+        200,
+        "success",
+        `Password reset email sent to ${email}`
+      );
+    } catch (error) {
+      console.error("Error in forgotPassword:", error);
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request",
+        null,
+        error.message
+      );
+    }
+  }),
+  //! reset password
+  resetPassword: asyncHandler(async (req, res) => {
+    const { verifyToken } = req.params;
+    const { password } = req.body;
+
+    try {
+      //Convert the token to actual token that has been saved in our db
+      const cryptoToken = crypto
+        .createHash("sha256")
+        .update(verifyToken)
+        .digest("hex");
+
+      //Find the user
+      const userFound = await User.findOne({
+        passwordResetToken: cryptoToken,
+        passwordResetExpires: { $gt: Date.now() },
+      });
+
+      if (!userFound) {
+        return sendResponse(
+          res,
+          400,
+          "error",
+          "Password reset token is invalid or has expired"
+        );
+      }
+
+      //Update the user field
+      //change the password
+      const salt = await bcrypt.genSalt(10);
+      userFound.password = await bcrypt.hash(password, salt);
+      userFound.passwordResetToken = null;
+      userFound.passwordResetExpires = null;
+
+      //resave the user
+      await userFound.save();
+
+      return sendResponse(res, 200, "success", "Password successfully reset");
+    } catch (error) {
+      console.error("Error in resetPassword:", error);
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while resetting your password",
+        null,
+        error.message
+      );
+    }
   }),
 };
 

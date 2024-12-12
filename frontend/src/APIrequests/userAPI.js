@@ -61,3 +61,31 @@ export const logoutApi = async () => {
   );
   return data;
 };
+
+export const forgotPasswordApi = async (email) => {
+  const response = await axios.post(
+    `${baseUrl}/forgot-password`,
+    {
+      email,
+    },
+    {
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
+};
+
+export const resetPasswordApi = async (data) => {
+  const response = await axios.post(
+    `${baseUrl}/reset-password/${data?.verifyToken}`,
+    {
+      password: data?.password,
+    },
+    {
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
+};

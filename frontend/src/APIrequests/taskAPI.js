@@ -32,7 +32,7 @@ export const updateTaskApi = async (updateData) => {
   return data;
 };
 
-export const deletePostApi = async (taskId) => {
+export const deleteTaskApi = async (taskId) => {
   const { data } = await axios.delete(`${baseUrl}/${taskId}`, {
     withCredentials: true,
   });

@@ -28,9 +28,17 @@ const AddSubCategory = () => {
     },
   });
 
+  const renderError = (field) =>
+    formik.touched[field] &&
+    formik.errors[field] && (
+      <p className="mt-1 text-sm text-red-500 absolute top-0 right-4">
+        {formik.errors[field]}
+      </p>
+    );
+
   return (
-    <section className="bg-gray-50 flex items-center justify-center w-1/2">
-      <div className="w-full max-w-md p-6 space-y-8 sm:p-8 bg-white rounded-lg shadow-xl dark:bg-gray-800">
+    <section className=" flex items-center justify-center w-full">
+      <div className="w-full  space-y-8  rounded-lg shadow-xl  bg-gray-800">
         {subCategoryMutation.isLoading && (
           <div className="absolute top-5 w-full text-center">
             <h2 className="text-lg font-semibold text-blue-600">
@@ -47,17 +55,18 @@ const AddSubCategory = () => {
           </div>
         )}
 
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold    text-white  bg-slate-900 rounded-t-lg py-2">
           Add subcategory
         </h2>
-        <form className="mt-8 space-y-6" onSubmit={formik.handleSubmit}>
-          <div>
+        <form className="mt-8 px-3 space-y-6" onSubmit={formik.handleSubmit}>
+          <div className="relative">
             <label
               htmlFor="title"
-              className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              className="text-left block mb-2 text-sm font-medium   text-white"
             >
               Subcategory Name
             </label>
+            {renderError("title")}
             <input
               type="text"
               name="title"
@@ -68,17 +77,14 @@ const AddSubCategory = () => {
                 formik.errors.category && formik.touched.category
                   ? "border-red-500"
                   : "border-gray-300"
-              } text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white`}
+              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  bg-gray-700  border-gray-600  placeholder-gray-400  text-white`}
             />
-            {formik.errors.title && formik.touched.title && (
-              <p className="mt-1 text-sm text-red-500">{formik.errors.title}</p>
-            )}
           </div>
 
           <div>
             <label
               htmlFor="description"
-              className="text-left block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              className="text-left block mb-2 text-sm font-medium  text-white"
             >
               Description
             </label>
@@ -88,13 +94,13 @@ const AddSubCategory = () => {
               id="description"
               {...formik.getFieldProps("description")}
               placeholder="Enter category description"
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+              className=" border  text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  bg-gray-700  border-gray-600  placeholder-gray-400  text-white"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 sm:w-auto dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            className="w-full px-5 py-3 text-base font-medium text-center text-white  focus:ring-4  sm:w-auto  bg-blue-600 rounded-lg hover:bg-blue-700  focus:ring-blue-800"
             disabled={formik.isSubmitting}
           >
             {formik.isSubmitting ? "Adding..." : "Add subcategory"}

@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer components {
+  .form-label {
+    @apply flex mb-2 text-sm font-medium text-slate-700 text-left;
+  }
+  .form-input {
+    @apply border  text-sm rounded-lg text-slate-900  focus:ring-blue-500 focus:border-blue-500 block w-full   bg-gray-50 outline-none ;
+  }
 }
 
 /* Box sizing rules */
@@ -43,6 +49,8 @@ ol[role="list"] {
 body {
   min-height: 100vh;
   line-height: 1.5;
+  /* height:max-content; */
+  /* background-color: aqua; */
 }
 
 /* Set shorter line heights on headings and interactive elements */
