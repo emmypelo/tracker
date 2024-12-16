@@ -1,11 +1,11 @@
 /* eslint-disable react/prop-types */
-
-import { Link } from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { forgotPasswordApi } from "../APIrequests/userAPI";
+import Modal from "./Modal";
+import { useState } from "react";
 
 const InputField = ({
   label,
@@ -45,9 +45,26 @@ const InputField = ({
 );
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+
   const ForgotPasswordMutation = useMutation({
     mutationKey: ["forgot-password"],
     mutationFn: forgotPasswordApi,
+    onSuccess: () => {
+      setModalMessage(
+        "Password reset link sent to your email, check your inbox or spam to reset your password"
+      );
+      setIsError(false);
+      setIsModalOpen(true);
+    },
+    onError: (error) => {
+      setModalMessage(error.response?.data?.message || "An error occurred.");
+      setIsError(true);
+      setIsModalOpen(true);
+    },
   });
 
   const formik = useFormik({
@@ -55,12 +72,13 @@ const ForgotPassword = () => {
       email: "",
     },
     validationSchema: Yup.object({
-      email: Yup.string().email("Invalid email format"),
+      email: Yup.string()
+        .email("Invalid email format")
+        .required("Email is required"),
     }),
     onSubmit: async (values, { setSubmitting }) => {
       try {
-        const data = await ForgotPasswordMutation.mutateAsync(values.email);
-        console.log(data);
+        await ForgotPasswordMutation.mutateAsync(values.email);
       } catch (error) {
         console.error("Request failed", error);
       } finally {
@@ -69,12 +87,20 @@ const ForgotPassword = () => {
     },
   });
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    if (!isError) {
+      formik.resetForm();
+      navigate("/signin");
+    }
+  };
+
   return (
     <section className="">
       <div className="w-full p-6 space-y-8 sm:p-8 rounded-lg shadow-xl ">
         <h2 className="text-2xl font-bold text-slate-900 ">Reset Password</h2>
         <form className="mt-8 space-y-6" onSubmit={formik.handleSubmit}>
-          <p className="text-red-500  h-3">
+          <p className="text-red-500 h-3">
             {ForgotPasswordMutation.error?.response?.data?.message ||
               ForgotPasswordMutation.error?.message}
           </p>
@@ -102,7 +128,7 @@ const ForgotPassword = () => {
           </div>
           <button
             type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white  rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
             disabled={formik.isSubmitting}
           >
             {formik.isSubmitting ? "Loading in..." : "Reset password"}
@@ -116,6 +142,20 @@ const ForgotPassword = () => {
           </div>
         </form>
       </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={isError ? "Error" : "Success"}
+        buttonText="Close"
+      >
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
+      </Modal>
     </section>
   );
 };

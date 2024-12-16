@@ -6,7 +6,7 @@ import taskController from "../controllers/taskController.js";
 const taskRouter = Router();
 
 taskRouter
-  .post("/create", taskController.createTask)
+  .post("/create", isAuthenticated, taskController.createTask)
   .get("/", taskController.fetchAllTasks)
   .get("/:taskId", taskController.fetchOneTask)
   .patch("/:taskId", isAuthenticated, taskController.updateTask)

@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import Category from "../models/Category.js";
 import SubCategory from "../models/SubCategory.js";
 import Task from "../models/Task.js";
+import User from "../models/User.js";
 
 // Helper function for sending consistent API responses
 const sendResponse = (
@@ -36,6 +37,11 @@ const taskController = {
       if (!subCategoryFound) {
         return sendResponse(res, 404, "error", "Subcategory not found");
       }
+      // Find User
+      const userFound = await User.findById(req.user);
+      if (!userFound) {
+        return sendResponse(res, 400, "error", "Not a valid user");
+      }
 
       // Create new task
       const taskCreated = await Task.create({
@@ -45,6 +51,7 @@ const taskController = {
         approver,
         category,
         subCategory,
+        handler: userFound,
       });
 
       // Push the task into the category's task array
@@ -54,6 +61,10 @@ const taskController = {
       // Push the task into the subcategory's task array
       subCategoryFound.tasks.push(taskCreated._id);
       await subCategoryFound.save();
+
+      // Push the task into the user tasks array
+      userFound.tasks.push(taskCreated._id);
+      await userFound.save();
 
       return sendResponse(res, 201, "success", "Task created successfully", {
         task: taskCreated,
@@ -143,7 +154,10 @@ const taskController = {
   fetchOneTask: asyncHandler(async (req, res) => {
     try {
       const taskId = req.params.taskId;
-      const task = await Task.findById(taskId);
+      const task = await Task.findById(taskId)
+        .populate("category")
+        .populate("subCategory")
+        .populate("handler");
 
       if (!task) {
         return sendResponse(res, 404, "error", "Task not found");
@@ -169,21 +183,39 @@ const taskController = {
   updateTask: asyncHandler(async (req, res) => {
     try {
       const taskId = req.params.taskId;
-      const taskFound = await Task.findById(taskId);
 
+      // Find the task by ID
+      const taskFound = await Task.findById(taskId);
       if (!taskFound) {
         return sendResponse(res, 404, "error", "Task not found");
       }
 
-      const taskUpdated = await Task.findByIdAndUpdate(
-        taskId,
-        {
-          isApproved: req.body.isApproved,
-          isPaid: req.body.isPaid,
-          isCompleted: req.body.isCompleted,
-        },
-        // { new: true }
-      );
+      // Validate progress and isCompleted logic manually
+      const { isCompleted, progress } = req.body;
+      if (isCompleted && progress < 90) {
+        return sendResponse(
+          res,
+          400,
+          "error",
+          "Task cannot be marked as completed if progress is less than 90%"
+        );
+      }
+
+      // Safely update the task
+      const updateFields = {};
+      if (req.body.isApproved !== undefined)
+        updateFields.isApproved = req.body.isApproved;
+      if (req.body.isPaid !== undefined) updateFields.isPaid = req.body.isPaid;
+      if (req.body.progress !== undefined)
+        updateFields.progress = req.body.progress;
+      if (req.body.isCompleted !== undefined)
+        updateFields.isCompleted = req.body.isCompleted;
+      if (req.body.remark !== undefined) updateFields.remark = req.body.remark;
+
+      const taskUpdated = await Task.findByIdAndUpdate(taskId, updateFields, {
+        new: true, // Return the updated document
+        runValidators: true, // Ensure Mongoose validation runs
+      });
 
       return sendResponse(res, 200, "success", "Task updated successfully", {
         task: taskUpdated,

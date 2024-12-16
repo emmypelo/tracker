@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -5,8 +7,10 @@ import Select from "react-select";
 import { fetchCategoriesApi } from "../APIrequests/categoryAPI";
 import { fetchSubCategoriesApi } from "../APIrequests/subCategoryAPI";
 import { createTaskApi } from "../APIrequests/taskAPI";
+import Modal from "./Modal";
 
 const CreateTask = () => {
+  const navigate = useNavigate();
   const approvers = [
     { value: "TES", label: "TES" },
     { value: "AAB", label: "AAB" },
@@ -18,6 +22,10 @@ const CreateTask = () => {
     mutationKey: ["createTask"],
     mutationFn: createTaskApi,
   });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [isError, setIsError] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -38,10 +46,20 @@ const CreateTask = () => {
     }),
     onSubmit: async (values) => {
       try {
-        await taskMutation.mutateAsync(values);
+        const response = await taskMutation.mutateAsync(values);
         console.log("Submitted values:", values);
+        setModalMessage(response.message || "Task created successfully!");
+        setIsError(false);
+        setIsModalOpen(true);
       } catch (error) {
         console.error("Task creating failed:", error);
+        setModalMessage(
+          error.response?.data?.error ||
+            error.message ||
+            "An error occurred while creating the task."
+        );
+        setIsError(true);
+        setIsModalOpen(true);
       }
     },
   });
@@ -56,7 +74,6 @@ const CreateTask = () => {
     queryFn: fetchSubCategoriesApi,
   });
 
-  // Helper function for displaying form errors
   const renderError = (field) =>
     formik.touched[field] &&
     formik.errors[field] && (
@@ -65,36 +82,31 @@ const CreateTask = () => {
       </p>
     );
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    if (!isError) {
+      formik.resetForm();
+      navigate("/");
+    }
+  };
+
   return (
-    <div className="flex flex-col w-full items-center mx-auto ">
+    <div className="flex flex-col w-full items-center mx-auto">
       <form
         onSubmit={formik.handleSubmit}
-        className="relative w-full space-y-2  p-6 "
+        className="relative w-full space-y-2 p-6"
       >
         <h2 className="text-2xl font-bold text-slate-800 text-center capitalize">
           Create New Task
         </h2>
 
-        {/* Display submission status */}
-        {taskMutation.isLoading && (
-          <div className="text-center text-blue-600">Creating post...</div>
-        )}
-        {taskMutation.isError && (
-          <div className="text-center text-red-500">
-            {taskMutation.error?.response?.data?.error ||
-              taskMutation.error?.message}
-          </div>
-        )}
-        {taskMutation.isSuccess && (
-          <div className="text-center text-green-600">
-            Task created successfully!
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Title Input */}
           <div className="relative">
-            <label htmlFor="title" className="form-label">
+            <label
+              htmlFor="title"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Title
             </label>
             {renderError("title")}
@@ -103,17 +115,20 @@ const CreateTask = () => {
               type="text"
               placeholder="Enter post title"
               {...formik.getFieldProps("title")}
-              className={`form-input p-2.5 ${
+              className={`w-full p-2.5 border rounded-md ${
                 formik.touched.title && formik.errors.title
                   ? "border-red-500"
-                  : ""
+                  : "border-gray-300"
               }`}
             />
           </div>
 
           {/* Vendor Input */}
           <div className="relative">
-            <label htmlFor="vendor" className="form-label">
+            <label
+              htmlFor="vendor"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Vendor
             </label>
             {renderError("vendor")}
@@ -122,16 +137,20 @@ const CreateTask = () => {
               type="text"
               placeholder="Enter vendor name"
               {...formik.getFieldProps("vendor")}
-              className={`form-input p-2.5 ${
+              className={`w-full p-2.5 border rounded-md ${
                 formik.touched.vendor && formik.errors.vendor
                   ? "border-red-500"
-                  : ""
+                  : "border-gray-300"
               }`}
             />
           </div>
+
           {/* Amount Input */}
           <div className="relative">
-            <label htmlFor="amount" className="form-label">
+            <label
+              htmlFor="amount"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Amount
             </label>
             {renderError("amount")}
@@ -142,17 +161,20 @@ const CreateTask = () => {
               min="0.00"
               step="0.01"
               {...formik.getFieldProps("amount")}
-              className={`form-input p-2.5 ${
+              className={`w-full p-2.5 border rounded-md ${
                 formik.touched.amount && formik.errors.amount
                   ? "border-red-500"
-                  : ""
+                  : "border-gray-300"
               }`}
             />
           </div>
 
           {/* Approver Select */}
           <div className="relative">
-            <label htmlFor="approver" className="form-label">
+            <label
+              htmlFor="approver"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Approver
             </label>
             {renderError("approver")}
@@ -162,7 +184,7 @@ const CreateTask = () => {
               onChange={(option) =>
                 formik.setFieldValue("approver", option.value)
               }
-              className={`form-input ${
+              className={`${
                 formik.touched.approver && formik.errors.approver
                   ? "border-red-500"
                   : ""
@@ -170,8 +192,11 @@ const CreateTask = () => {
               styles={{
                 control: (baseStyles) => ({
                   ...baseStyles,
-                  border: "0px",
-                  textAlign: "left",
+                  borderColor:
+                    formik.touched.approver && formik.errors.approver
+                      ? "#ef4444"
+                      : "#d1d5db",
+                  boxShadow: "none",
                 }),
               }}
             />
@@ -179,7 +204,10 @@ const CreateTask = () => {
 
           {/* Category Select */}
           <div className="relative">
-            <label htmlFor="category" className="form-label">
+            <label
+              htmlFor="category"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Category
             </label>
             {renderError("category")}
@@ -193,7 +221,7 @@ const CreateTask = () => {
               onChange={(option) =>
                 formik.setFieldValue("category", option.value)
               }
-              className={`form-input ${
+              className={`${
                 formik.touched.category && formik.errors.category
                   ? "border-red-500"
                   : ""
@@ -201,8 +229,11 @@ const CreateTask = () => {
               styles={{
                 control: (baseStyles) => ({
                   ...baseStyles,
-                  border: "0px",
-                  textAlign: "left",
+                  borderColor:
+                    formik.touched.category && formik.errors.category
+                      ? "#ef4444"
+                      : "#d1d5db",
+                  boxShadow: "none",
                 }),
               }}
             />
@@ -210,7 +241,10 @@ const CreateTask = () => {
 
           {/* Subcategory Select */}
           <div className="relative">
-            <label htmlFor="subCategory" className="form-label">
+            <label
+              htmlFor="subCategory"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Subcategory
             </label>
             {renderError("subCategory")}
@@ -226,7 +260,7 @@ const CreateTask = () => {
               onChange={(option) =>
                 formik.setFieldValue("subCategory", option.value)
               }
-              className={`form-input ${
+              className={`${
                 formik.touched.subCategory && formik.errors.subCategory
                   ? "border-red-500"
                   : ""
@@ -234,8 +268,11 @@ const CreateTask = () => {
               styles={{
                 control: (baseStyles) => ({
                   ...baseStyles,
-                  border: "0px",
-                  textAlign: "left",
+                  borderColor:
+                    formik.touched.subCategory && formik.errors.subCategory
+                      ? "#ef4444"
+                      : "#d1d5db",
+                  boxShadow: "none",
                 }),
               }}
             />
@@ -244,13 +281,26 @@ const CreateTask = () => {
 
         <button
           type="submit"
-          style={{ marginTop: "4rem" }}
-          className="w-1/3  px-5 py-3 text-base font-medium text-white rounded-lg bg-blue-600 hover:bg-blue-700 focus:ring-blue-800 "
+          className="w-1/3 px-5 py-3 mt-8 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={formik.isSubmitting}
         >
           {formik.isSubmitting ? "Creating Task..." : "Create Task"}
         </button>
       </form>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={isError ? "Error" : "Success"}
+      >
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
+      </Modal>
     </div>
   );
 };

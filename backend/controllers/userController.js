@@ -73,7 +73,7 @@ const userController = {
         lastname,
         email,
         password: hashedPassword,
-        passmatch: hashedPassword,
+      
       });
 
       return sendResponse(res, 201, "success", "User created successfully", {

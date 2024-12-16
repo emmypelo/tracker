@@ -12,11 +12,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
-        <div className=" bg-gradient-to-br from-yellow-100 via-red-100 to-red-200  min-h-[100vh]">
+        <div className="">
           <App />
         </div>
       </Provider>
-
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </React.StrictMode>

@@ -7,7 +7,7 @@ const taskSchema = new Schema(
     handler: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      // required: true,
+      required: true,
     },
     vendor: {
       type: String,
@@ -27,7 +27,7 @@ const taskSchema = new Schema(
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",
-      required: [true, 'category is required'],
+      required: [true, "category is required"],
     },
     subCategory: {
       type: Schema.Types.ObjectId,
@@ -37,18 +37,44 @@ const taskSchema = new Schema(
       type: Boolean,
       default: false,
     },
-
     isPaid: {
       type: Boolean,
       default: false,
     },
-
+    isOngoing: {
+      type: Boolean,
+      default: false,
+    },
+    progress: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
     isCompleted: {
       type: Boolean,
       default: false,
     },
+    remark: {
+      type: String,
+      default: "No remark",
+      trim: true,
+    },
   },
   { timestamps: true }
 );
+
+// Pre-save middleware to check progress before setting isCompleted
+taskSchema.pre("save", function (next) {
+  if (
+    this.isModified("isCompleted") &&
+    this.isCompleted &&
+    this.progress < 90
+  ) {
+    this.isCompleted = false;
+  }
+  next();
+});
+
 const Task = model("Task", taskSchema);
 export default Task;

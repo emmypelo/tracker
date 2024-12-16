@@ -3,12 +3,28 @@ import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { addCategoryApi } from "../APIrequests/categoryAPI";
+import Modal from "./Modal"; // Import the Modal component
+import { useState } from "react";
 
 const AddCategory = () => {
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+
   const categoryMutation = useMutation({
     mutationKey: ["add-category"],
     mutationFn: addCategoryApi,
+    onSuccess: () => {
+      setModalMessage("Category added successfully.");
+      setIsError(false);
+      setIsModalOpen(true);
+    },
+    onError: (error) => {
+      setModalMessage(error.response?.data?.message || "An error occurred.");
+      setIsError(true);
+      setIsModalOpen(true);
+    },
   });
 
   const formik = useFormik({
@@ -21,12 +37,10 @@ const AddCategory = () => {
       description: Yup.string(),
     }),
     onSubmit: async (values) => {
-      categoryMutation.mutateAsync(values);
-      if (!categoryMutation.isError) {
-        navigate("/");
-      }
+      await categoryMutation.mutateAsync(values);
     },
   });
+
   const renderError = (field) =>
     formik.touched[field] &&
     formik.errors[field] && (
@@ -35,9 +49,17 @@ const AddCategory = () => {
       </p>
     );
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    if (!isError) {
+      formik.resetForm();
+      navigate("/");
+    }
+  };
+
   return (
-    <section className="  flex items-center justify-center w-full">
-      <div className="w-full  space-y-8  rounded-lg shadow-xl bg-gray-800">
+    <section className="flex items-center justify-center w-full">
+      <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
         {categoryMutation.isLoading && (
           <div className="absolute top-5 w-full text-center">
             <h2 className="text-lg font-semibold text-blue-600">
@@ -54,7 +76,7 @@ const AddCategory = () => {
           </div>
         )}
 
-        <h2 className="text-2xl font-bold  text-white bg-slate-900 rounded-t-lg py-2">
+        <h2 className="text-2xl font-bold text-white bg-slate-900 rounded-t-lg py-2">
           Add Category
         </h2>
         <form className="mt-8 px-3 space-y-6" onSubmit={formik.handleSubmit}>
@@ -76,15 +98,14 @@ const AddCategory = () => {
                 formik.errors.category && formik.touched.category
                   ? "border-red-500"
                   : "border-gray-300"
-              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  bg-gray-700  border-gray-600  placeholder-gray-400  text-white`}
+              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white`}
             />
-            
           </div>
 
           <div>
             <label
               htmlFor="description"
-              className="text-left block mb-2 text-sm font-medium   text-white"
+              className="text-left block mb-2 text-sm font-medium text-white"
             >
               Description
             </label>
@@ -94,19 +115,33 @@ const AddCategory = () => {
               id="description"
               {...formik.getFieldProps("description")}
               placeholder="Enter category description"
-              className=" border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5  bg-gray-700  border-gray-600  placeholder-gray-400  text-white"
+              className="border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white  rounded-lg  focus:ring-4  sm:w-auto  bg-blue-600  hover:bg-blue-700  focus:ring-blue-800"
+            className="w-full px-5 py- 3 text-base font-medium text-center text-white rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
             disabled={formik.isSubmitting}
           >
             {formik.isSubmitting ? "Adding..." : "Add Category"}
           </button>
         </form>
       </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={isError ? "Error" : "Success"}
+        buttonText="Close"
+      >
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
+      </Modal>
     </section>
   );
 };

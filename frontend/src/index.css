@@ -7,7 +7,7 @@
     @apply flex mb-2 text-sm font-medium text-slate-700 text-left;
   }
   .form-input {
-    @apply border  text-sm rounded-lg text-slate-900  focus:ring-blue-500 focus:border-blue-500 block w-full   bg-gray-50 outline-none ;
+    @apply border  text-sm rounded-lg text-slate-900  focus:ring-blue-500 focus:border-blue-500 block w-full   bg-gray-50 outline-none;
   }
 }
 
@@ -103,4 +103,10 @@ textarea:not([rows]) {
 /* Anything that has been anchored to should have extra scroll margin */
 :target {
   scroll-margin-block: 5ex;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }

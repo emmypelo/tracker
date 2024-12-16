@@ -6,6 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { resetPasswordApi } from "../APIrequests/userAPI";
+import Modal from "./Modal"; // Import the Modal component
+import { useState } from "react";
 
 const InputField = ({
   label,
@@ -45,14 +47,29 @@ const InputField = ({
 );
 
 const ResetPassword = () => {
-  //get the token from the url
   const { verifyToken } = useParams();
-  //navigate
   const navigate = useNavigate();
-  // user mutation
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+
   const resetPasswordMutation = useMutation({
     mutationKey: ["reset-password"],
     mutationFn: resetPasswordApi,
+    onSuccess: () => {
+      setModalMessage("Password has been reset successfully.");
+      setIsError(false);
+      setIsModalOpen(true);
+      // Redirect after a short delay to allow the user to see the success message
+      setTimeout(() => {
+        navigate("/signin");
+      }, 5000);
+    },
+    onError: (error) => {
+      setModalMessage(error.response?.data?.message || "An error occurred.");
+      setIsError(true);
+      setIsModalOpen(true);
+    },
   });
 
   const formik = useFormik({
@@ -68,11 +85,7 @@ const ResetPassword = () => {
         verifyToken,
       };
       try {
-        const res = await resetPasswordMutation.mutateAsync(data).then(() => {
-          // redirect
-          navigate("/signin");
-        });
-        console.log(res);
+        await resetPasswordMutation.mutateAsync(data);
       } catch (error) {
         console.error("Request failed", error);
       } finally {
@@ -81,12 +94,20 @@ const ResetPassword = () => {
     },
   });
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    if (!isError) {
+      formik.resetForm();
+      navigate("/signin");
+    }
+  };
+
   return (
     <section className="">
       <div className="w-full p-6 space-y-8 sm:p-8 rounded-lg shadow-xl ">
         <h2 className="text-2xl font-bold text-slate-900 ">Reset Password</h2>
         <form className="mt-8 space-y-6" onSubmit={formik.handleSubmit}>
-          <p className="text-red-500  h-3">
+          <p className="text-red-500 h-3">
             {resetPasswordMutation.error?.response?.data?.message ||
               resetPasswordMutation.error?.message}
           </p>
@@ -100,8 +121,8 @@ const ResetPassword = () => {
             value={formik.values.password}
             onChange={formik.handleChange}
             onBlur={formik.handleBlur}
-            error={formik.errors.email}
-            touched={formik.touched.email}
+            error={formik.errors.password} // Corrected to use password error
+            touched={formik.touched.password} // Corrected to use password touched
           />
 
           <div className="flex items-start">
@@ -114,7 +135,7 @@ const ResetPassword = () => {
           </div>
           <button
             type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white  rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800 "
             disabled={formik.isSubmitting}
           >
             {formik.isSubmitting ? "Loading in..." : "Reset password"}
@@ -128,6 +149,20 @@ const ResetPassword = () => {
           </div>
         </form>
       </div>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={isError ? "Error" : "Success"}
+        buttonText="Close"
+      >
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
+      </Modal>
     </section>
   );
 };
