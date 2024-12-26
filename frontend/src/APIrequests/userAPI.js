@@ -21,15 +21,10 @@ export const checkUserApi = async (email) => {
         withCredentials: true,
       }
     );
-    if (data.userExist === false) {
-      // console.log(data);
-      return data;
-    } else {
-      throw new Error("Email already in database");
-    }
+    return data; // Return the entire data object
   } catch (error) {
     console.error("Error checking user existence:", error);
-    return { exists: false };
+    throw error; // Rethrow the error to be handled in the Yup validation
   }
 };
 

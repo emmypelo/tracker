@@ -6,7 +6,7 @@ const subCategoryRouter = Router();
 
 subCategoryRouter
   .post("/create", isAuthenticated, subCategoryController.createSubCategory) // Create a subcategory
-  .get("/", isAuthenticated, subCategoryController.fetchAllSubCategories) // Fetch all subcategories
+  .get("/", subCategoryController.fetchAllSubCategories) // Fetch all subcategories
   .get("/:subCategoryId", subCategoryController.fetchOneSubCategory) // Fetch a single subcategory by ID
   .put(
     "/:subCategoryId",

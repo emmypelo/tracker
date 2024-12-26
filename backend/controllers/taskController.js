@@ -3,7 +3,7 @@ import Category from "../models/Category.js";
 import SubCategory from "../models/SubCategory.js";
 import Task from "../models/Task.js";
 import User from "../models/User.js";
-
+import jwt from "jsonwebtoken";
 // Helper function for sending consistent API responses
 const sendResponse = (
   res,
@@ -38,7 +38,10 @@ const taskController = {
         return sendResponse(res, 404, "error", "Subcategory not found");
       }
       // Find User
-      const userFound = await User.findById(req.user);
+      const token = req.cookies["TrackIt"];
+      const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+      const userFound = await User.findById(decodedUser.id);
+
       if (!userFound) {
         return sendResponse(res, 400, "error", "Not a valid user");
       }
@@ -51,7 +54,7 @@ const taskController = {
         approver,
         category,
         subCategory,
-        handler: userFound,
+        handler: userFound._id,
       });
 
       // Push the task into the category's task array
@@ -182,15 +185,30 @@ const taskController = {
   // Update an existing task
   updateTask: asyncHandler(async (req, res) => {
     try {
-      const taskId = req.params.taskId;
+      const token = req.cookies["TrackIt"];
+      const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decodedUser.id);
 
       // Find the task by ID
+      const taskId = req.params.taskId;
       const taskFound = await Task.findById(taskId);
       if (!taskFound) {
         return sendResponse(res, 404, "error", "Task not found");
       }
 
-      // Validate progress and isCompleted logic manually
+      // Check user permission to update the task
+      const canUpdate = user._id.toString() === taskFound.handler.toString();
+      console.log(user._id, taskFound.handler);
+      if (!canUpdate) {
+        return sendResponse(
+          res,
+          403,
+          "error",
+          "You don't have permission to update this task"
+        );
+      }
+
+      // Validate progress and isCompleted logic
       const { isCompleted, progress } = req.body;
       if (isCompleted && progress < 90) {
         return sendResponse(
@@ -201,7 +219,7 @@ const taskController = {
         );
       }
 
-      // Safely update the task
+      // Safely update the task fields
       const updateFields = {};
       if (req.body.isApproved !== undefined)
         updateFields.isApproved = req.body.isApproved;
@@ -212,6 +230,7 @@ const taskController = {
         updateFields.isCompleted = req.body.isCompleted;
       if (req.body.remark !== undefined) updateFields.remark = req.body.remark;
 
+      // Update the task
       const taskUpdated = await Task.findByIdAndUpdate(taskId, updateFields, {
         new: true, // Return the updated document
         runValidators: true, // Ensure Mongoose validation runs
@@ -236,12 +255,28 @@ const taskController = {
   // Delete a task
   deleteTask: asyncHandler(async (req, res) => {
     try {
-      const taskId = req.params.taskId;
-      const task = await Task.findById(taskId);
+     const token = req.cookies["TrackIt"];
+     const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+     const user = await User.findById(decodedUser.id);
 
-      if (!task) {
-        return sendResponse(res, 404, "error", "Task not found");
-      }
+     // Find the task by ID
+     const taskId = req.params.taskId;
+     const taskFound = await Task.findById(taskId);
+     if (!taskFound) {
+       return sendResponse(res, 404, "error", "Task not found");
+     }
+
+     // Check user permission to update the task
+     const canDelete = user._id.toString() === taskFound.handler.toString();
+     console.log(user._id, taskFound.handler);
+     if (!canDelete) {
+       return sendResponse(
+         res,
+         403,
+         "error",
+         "You don't have permission to delete this task"
+       );
+     }
 
       await Task.findByIdAndDelete(taskId);
       return sendResponse(res, 200, "success", "Task deleted successfully");

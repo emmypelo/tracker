@@ -46,19 +46,23 @@ const CreateTask = () => {
     }),
     onSubmit: async (values) => {
       try {
-        const response = await taskMutation.mutateAsync(values);
+        await taskMutation.mutateAsync(values);
         console.log("Submitted values:", values);
-        setModalMessage(response.message || "Task created successfully!");
         setIsError(false);
+        setModalMessage("Task created successfully");
         setIsModalOpen(true);
       } catch (error) {
-        console.error("Task creating failed:", error);
-        setModalMessage(
-          error.response?.data?.error ||
-            error.message ||
-            "An error occurred while creating the task."
-        );
         setIsError(true);
+        let errorMessage = "Task creation failed";
+
+        if (error.response?.status === 401 || error.message.includes("401")) {
+          errorMessage = "Login required";
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        console.error("Error creating task:", error);
+        setModalMessage(errorMessage);
         setIsModalOpen(true);
       }
     },
@@ -251,7 +255,7 @@ const CreateTask = () => {
             <Select
               id="subCategory"
               placeholder="Select a Subcategory"
-              options={subCategoriesData?.data?.subCategories?.map(
+              options={subCategoriesData?.data?.subCategories.map(
                 (subCategory) => ({
                   value: subCategory._id,
                   label: subCategory.title,

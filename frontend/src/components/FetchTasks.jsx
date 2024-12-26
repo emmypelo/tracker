@@ -1,18 +1,29 @@
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { fetchTasksApi, updateTaskApi } from "../APIrequests/taskAPI";
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  deleteTaskApi,
+  fetchTasksApi,
+  updateTaskApi,
+} from "../APIrequests/taskAPI";
 import { fetchCategoriesApi } from "../APIrequests/categoryAPI";
 import { fetchSubCategoriesApi } from "../APIrequests/subCategoryAPI";
 import { FiEdit } from "react-icons/fi";
-import { MdOutlineCancel } from "react-icons/md";
+import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { formatAmount } from "./hooks";
+import Modal from "./Modal";
+import debounce from "lodash/debounce";
 
 const FetchTask = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMessage, setModalMessage] = useState("");
   const [editingRowId, setEditingRowId] = useState(null);
-  
+  const [isError, setIsError] = useState(false);
+
   const [filters, setFilters] = useState({
     category: "",
     subCategory: "",
@@ -24,6 +35,19 @@ const FetchTask = () => {
     endDate: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+
+  const debouncedFetchTasks = useCallback(
+    debounce((newFilters) => {
+      queryClient.invalidateQueries(["fetchTasks", newFilters]);
+    }, 300),
+    [queryClient]
+  );
+
+  const handleFilterChange = (key, value) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    debouncedFetchTasks(newFilters);
+  };
 
   const {
     isLoading: isTasksLoading,
@@ -52,14 +76,51 @@ const FetchTask = () => {
     mutationFn: updateTaskApi,
     onSuccess: () => {
       setEditingRowId(null);
-      taskRefetch();
+      queryClient.invalidateQueries(["fetchTasks", filters]);
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationKey: ["deleteTask"],
+    mutationFn: deleteTaskApi,
+    onSuccess: () => {
+      setIsError(false);
+      setModalMessage("Task updated successfully");
+      setIsModalOpen(true);
+      taskRefetch();
+    },
+    onError: (error) => {
+      setIsError(true);
+      let errorMessage = "Deleting failed";
+
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        errorMessage = "Login required";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+
+      console.error("Error updating task:", error);
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
+    },
+  });
+
+  const handleDelete = async (taskId) => {
+    deleteMutation
+      .mutateAsync(taskId)
+      // .then(() => {
+      //   taskRefetch();
+      // })
+      .catch((error) => console.log(error));
+  };
+
   const [editValues, setEditValues] = useState({
     isApproved: false,
     isPaid: false,
     isCompleted: false,
-    remark: "",
+    progress: 0,
   });
 
   const handleEditChange = (key, value) => {
@@ -76,12 +137,43 @@ const FetchTask = () => {
     });
   };
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
     const updateData = {
       ...editValues,
       taskId: editingRowId,
     };
-    taskMutation.mutate(updateData);
+
+    try {
+      await taskMutation.mutateAsync(updateData);
+      console.log("Task updated successfully:", updateData);
+      setIsError(false);
+      setModalMessage("Task updated successfully");
+      setIsModalOpen(true);
+    } catch (error) {
+      setIsError(true);
+      let errorMessage = "Task update failed";
+
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        errorMessage = "Login required";
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      console.error("Error updating task:", error);
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
+    } finally {
+      setEditingRowId(null);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    if (!isError) {
+      navigate("/");
+    }
   };
 
   const cancelEditing = () => {
@@ -90,13 +182,8 @@ const FetchTask = () => {
       isApproved: false,
       isPaid: false,
       isCompleted: false,
-      amount: 0,
       progress: 0,
     });
-  };
-
-  const handleFilterChange = (key, value) => {
-    setFilters((prevFilters) => ({ ...prevFilters, [key]: value }));
   };
 
   const handleSearchChange = (e) => {
@@ -105,13 +192,12 @@ const FetchTask = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    setFilters({ ...filters, title: searchTerm });
-    taskRefetch();
+    handleFilterChange("title", searchTerm);
   };
 
   const clearFilters = () => {
     setSearchTerm("");
-    setFilters({
+    const clearedFilters = {
       category: "",
       subCategory: "",
       title: "",
@@ -120,9 +206,10 @@ const FetchTask = () => {
       isCompleted: "",
       startDate: "",
       endDate: "",
-    });
+    };
+    setFilters(clearedFilters);
+    debouncedFetchTasks(clearedFilters);
   };
-
 
   if (isTasksLoading) return <h2>Loading tasks...</h2>;
   if (isTasksError)
@@ -145,7 +232,7 @@ const FetchTask = () => {
           </Link>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4 mb py-6 px-4 sticky top-[8.5rem] z-20 bg-red-200 h-[9rem]">
+      <div className="flex flex-wrap gap-4 mb py-6 px-4 sticky top-[8.5rem] z-20 bg-gray-100 h-[9rem]">
         <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 ">
           <input
             type="text"
@@ -244,44 +331,37 @@ const FetchTask = () => {
       {tasks.length === 0 ? (
         <div>No tasks found</div>
       ) : (
-        <div
-          className="
-        
-        "
-        >
-          <table
-            className="w-full border-collapse border border-gray-300 bg-red-300"
-            // style={{ tableLayout: "fixed" }}
-          >
-            <thead className="">
-              <tr className="sticky top-[17rem] bg-blue-300 text-sm">
+        <div>
+          <table className="w-full border-collapse border border-gray-300 bg-white">
+            <thead>
+              <tr className="sticky top-[17rem] bg-gray-200 text-sm">
                 <th className="border p-1 w-[5%]">S/N</th>
-                <th className="sticky top-[16rem]border p-1 w-[20%]">Title</th>
-                <th className="border p-1 w-[15%]">Amount</th>
-                <th className="border p-1 w-[15%] hidden md:table-cell">
+                <th className="border p-1 w-[30%]">Title</th>
+                <th className="border p-1 w-[10%]">Amount</th>
+                <th className="border p-1 w-[10%] hidden md:table-cell">
                   Category
                 </th>
-                <th className="border p-1 w-[15%] hidden md:table-cell">
+                <th className="border p-1 w-[10%] hidden md:table-cell">
                   SubCategory
                 </th>
-                <th className="border p-1 w-[13%]">Approved</th>
-                <th className="border p-1 w-[10%]">Paid</th>
-                <th className="border p-1 w-[10%]">Progress</th>
-                <th className="border p-1 w-[10%]">Completed</th>
-                <th className="border p-1 w-[10%]">Actions</th>
+                <th className="border p-1 w-[6%]">Approved</th>
+                <th className="border p-1 w-[6%]">Paid</th>
+                <th className="border p-1 w-[6%]">Progress</th>
+                <th className="border p-1 w-[6%]">Completed</th>
+                <th className="border p-1 w-[12%]">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tasks.map((task, index) => (
                 <tr
                   key={task._id}
-                  className={`hover:bg-gray-100 text-sm md:text-base ${
+                  className={`hover:bg-gray-100 text-sm md:text-base h-12 max-h-36 ${
                     editingRowId === task._id ? "bg-yellow-50" : ""
                   }`}
                 >
                   <td className="border px-1 py-2">{index + 1}</td>
                   <td
-                    className="border px-4 py-2"
+                    className="border px-4 py-2 cursor-pointer text-blue-800 font-bold"
                     onClick={() => navigate(`/tasks/${task?._id}`)}
                   >
                     {task.title}
@@ -308,13 +388,19 @@ const FetchTask = () => {
                                 handleEditChange("isApproved", e.target.checked)
                               }
                             />
-                            <div className="w-10 h-4 bg-gray-400 rounded-full shadow-inner"></div>
                             <div
-                              className={`absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition ${
+                              className={`w-6 h-2 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
+                                editValues.isApproved
+                                  ? "bg-green-200"
+                                  : "bg-red-200"
+                              }`}
+                            ></div>
+                            <div
+                              className={`absolute w-4 h-4 rounded-full shadow transition-all duration-300 ease-in-out ${
                                 editValues.isApproved
                                   ? "transform translate-x-full bg-green-500"
-                                  : ""
-                              }`}
+                                  : "bg-red-500"
+                              } -left-1 -top-1`}
                             ></div>
                           </div>
                         </label>
@@ -342,13 +428,19 @@ const FetchTask = () => {
                                 handleEditChange("isPaid", e.target.checked)
                               }
                             />
-                            <div className="w-10 h-4 bg-gray-400 rounded-full shadow-inner"></div>
                             <div
-                              className={`absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition ${
+                              className={`w-6 h-2 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
+                                editValues.isPaid
+                                  ? "bg-green-200"
+                                  : "bg-red-200"
+                              }`}
+                            ></div>
+                            <div
+                              className={`absolute w-4 h-4 rounded-full shadow transition-all duration-300 ease-in-out ${
                                 editValues.isPaid
                                   ? "transform translate-x-full bg-green-500"
-                                  : ""
-                              }`}
+                                  : "bg-red-500"
+                              } -left-1 -top-1`}
                             ></div>
                           </div>
                         </label>
@@ -398,13 +490,19 @@ const FetchTask = () => {
                                 )
                               }
                             />
-                            <div className="w-10 h-4 bg-gray-400 rounded-full shadow-inner"></div>
                             <div
-                              className={`absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition ${
+                              className={`w-6 h-2 rounded-full shadow-inner transition-colors duration-300 ease-in-out ${
+                                editValues.isCompleted
+                                  ? "bg-green-200"
+                                  : "bg-red-200"
+                              }`}
+                            ></div>
+                            <div
+                              className={`absolute w-4 h-4 rounded-full shadow transition-all duration-300 ease-in-out ${
                                 editValues.isCompleted
                                   ? "transform translate-x-full bg-green-500"
-                                  : ""
-                              }`}
+                                  : "bg-red-500"
+                              } -left-1 -top-1`}
                             ></div>
                           </div>
                         </label>
@@ -421,27 +519,34 @@ const FetchTask = () => {
                   </td>
                   <td className="border px-4 py-2">
                     {editingRowId === task._id ? (
-                      <div className="flex justify-around space-x-2">
+                      <div className="flex justify-between">
                         <button
                           onClick={saveChanges}
                           className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1"
                         >
-                          <IoCheckmarkDoneSharp className="w-5 h-5" />
+                          <IoCheckmarkDoneSharp className="w-3 h-3" />
                         </button>
                         <button
                           onClick={cancelEditing}
                           className="bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
                         >
-                          <MdOutlineCancel className="w-5 h-5" />
+                          <MdOutlineCancel className="w-3 h-3" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex justify-center">
+                      <div className="flex justify-between">
                         <button
                           onClick={() => startEditing(task)}
                           className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1"
                         >
-                          <FiEdit className="w-5 h-5" />
+                          <FiEdit className="w-3 h-3" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(task._id)}
+                          className="bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                        >
+                          <MdDelete className="w-3 h-3" />
                         </button>
                       </div>
                     )}
@@ -452,6 +557,20 @@ const FetchTask = () => {
           </table>
         </div>
       )}
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        title={isError ? "Error" : "Success"}
+      >
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
+      </Modal>
     </div>
   );
 };

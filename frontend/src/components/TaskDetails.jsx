@@ -51,9 +51,16 @@ const TaskDetails = () => {
     onError: (error) => {
       setAlert({
         type: "error",
-        message: `Error updating task: ${
-          error.response?.data?.message || "User not logged in"
-        }`,
+        message: (() => {
+          if (error.response?.status === 401 || error.message.includes("401")) {
+            return "Login required";
+          } else if (error.response?.data?.error) {
+            return error.response.data.error;
+          } else if (error.response?.data?.message) {
+            return error.response.data.message;
+          }
+          return "An unexpected error occurred";
+        })(),
       });
     },
   });
@@ -176,7 +183,7 @@ const TaskInfoSection = ({ task }) => (
       <DetailRow
         icon={DollarSign}
         label="Amount"
-        value={`$${task.amount.toFixed(2)}`}
+        value={`${task.amount.toFixed(2)}`}
       />
       <DetailRow icon={User} label="Approver" value={task.approver} />
       <DetailRow
@@ -194,7 +201,13 @@ const TaskInfoSection = ({ task }) => (
 
 const TaskEditForm = ({ editValues, editMode, onCancel, onSave, onChange }) => (
   <div className={`mb-6 ${editMode ? "block" : "hidden"}`}>
-    <form className="space-y-4 border border-blue-300 p-4 rounded-lg bg-blue-50">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave();
+      }}
+      className="space-y-4 border border-blue-300 p-4 rounded-lg bg-blue-50"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <SelectField
           name="isApproved"
@@ -236,21 +249,40 @@ const TaskEditForm = ({ editValues, editMode, onCancel, onSave, onChange }) => (
             { value: "false", label: "Pending" },
           ]}
         />
-        <input
-          type="number"
-          value={editValues.progress}
-          onChange={(e) => onChange("progress", parseInt(e.target.value, 10))}
-          placeholder="Progress"
-          className="block w-full p-2 border rounded"
-        />
-        <textarea
-          name="remark"
-          value={editValues.remark}
-          onChange={(e) => onChange("remark", e.target.value)}
-          placeholder="Add remark"
-          className="block w-full p-2 border rounded resize-none"
-          rows={1}
-        />
+
+        <div>
+          <label
+            htmlFor="progress "
+            className="block font-semibold mb-1 text-sm"
+          >
+            Progress
+          </label>
+          <input
+            type="number"
+            min={0}
+            max={100}
+            value={editValues.progress}
+            onChange={(e) => onChange("progress", parseInt(e.target.value, 10))}
+            placeholder="Progress"
+            className="block w-full p-2 border rounded"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="progress"
+            className="block font-semibold mb-1 text-sm"
+          >
+            Remark
+          </label>
+          <textarea
+            name="remark"
+            value={editValues.remark}
+            onChange={(e) => onChange("remark", e.target.value)}
+            placeholder="Add remark"
+            className="block w-full p-2 border rounded resize-none"
+            rows={1}
+          />
+        </div>
       </div>
       <div className="flex justify-end space-x-4">
         <button
@@ -261,7 +293,7 @@ const TaskEditForm = ({ editValues, editMode, onCancel, onSave, onChange }) => (
           Cancel
         </button>
         <button
-          type="button"
+          type="submit"
           onClick={onSave}
           className="px-4 py-2 text-sm font-semibold rounded-full bg-blue-500 text-white hover:bg-blue-600"
         >

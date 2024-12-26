@@ -55,8 +55,8 @@ const SignUp = () => {
       firstname: "",
       lastname: "",
       email: "",
-      password: "",
-      passmatch: "",
+      password: "12345678",
+      passmatch: "12345678",
     },
     validationSchema: Yup.object({
       firstname: Yup.string().required("First Name is required"),
@@ -67,14 +67,10 @@ const SignUp = () => {
         .test("email-exists", "Email already exists", async (value) => {
           try {
             const response = await checkUserApi(value);
-            if (response?.data?.userExist === false) {
-              return true; // Email is valid and not in the database
-            } else {
-              throw new Yup.ValidationError("Email already in database");
-            }
+            return !response.userExists; // Return true if the user doesn't exist
           } catch (error) {
             console.error(error);
-            return false;
+            return false; // Treat any error as if the email exists (to be safe)
           }
         }),
       password: Yup.string()

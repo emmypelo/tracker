@@ -48,8 +48,8 @@ const taskSchema = new Schema(
     progress: {
       type: Number,
       default: 0,
-      min: 0,
-      max: 100,
+      min: [0, "Minimum value can not be lesser than 0"],
+      max: [100, "Maximum value can not be greater than 100"],
     },
     isCompleted: {
       type: Boolean,

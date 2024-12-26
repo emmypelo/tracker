@@ -8,10 +8,10 @@ const isAdmin = async (req, res, next) => {
       });
     }
     // Check if user has admin or head role
-    if (user.role !== "admin" && user.role !== "head") {
+    if (user.role !== "admin" || user.role !== "head") {
       return res.status(403).json({
         status: "error",
-        message: "You do not have permission to access this resource",
+        message: "You do not have permission to perform this operation",
       });
     }
     // If the user is an admin or head, allow them to proceed
