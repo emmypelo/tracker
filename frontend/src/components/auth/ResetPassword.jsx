@@ -5,9 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { resetPasswordApi } from "../APIrequests/userAPI";
-import Modal from "./Modal"; // Import the Modal component
+import { resetPasswordApi } from "../../APIrequests/userAPI";
 import { useState } from "react";
+import Modal from "../common/Modal";
 
 const InputField = ({
   label,

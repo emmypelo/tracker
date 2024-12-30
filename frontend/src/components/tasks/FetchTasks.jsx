@@ -5,19 +5,24 @@ import {
   deleteTaskApi,
   fetchTasksApi,
   updateTaskApi,
-} from "../APIrequests/taskAPI";
-import { fetchCategoriesApi } from "../APIrequests/categoryAPI";
-import { fetchSubCategoriesApi } from "../APIrequests/subCategoryAPI";
+} from "../../APIrequests/taskAPI";
+import { fetchCategoriesApi } from "../../APIrequests/categoryAPI";
+import { fetchSubCategoriesApi } from "../../APIrequests/subCategoryAPI";
 import { FiEdit } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
-import { Link, useNavigate } from "react-router-dom";
-import { formatAmount } from "./hooks";
-import Modal from "./Modal";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { formatAmount } from "../hooks/hooks";
+import Modal from "../common/Modal";
 import debounce from "lodash/debounce";
+import { useSelector } from "react-redux";
 
 const FetchTask = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { userAuth } = useSelector((state) => state.auth);
+  const isAuthenticated = userAuth?.data?.isAuthenticated === true;
+
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
@@ -94,7 +99,7 @@ const FetchTask = () => {
       let errorMessage = "Deleting failed";
 
       if (error.response?.status === 401 || error.message.includes("401")) {
-        errorMessage = "Login required";
+        navigate("/signin", { state: { from: location } });
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
@@ -108,12 +113,28 @@ const FetchTask = () => {
   });
 
   const handleDelete = async (taskId) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
     deleteMutation
       .mutateAsync(taskId)
-      // .then(() => {
-      //   taskRefetch();
-      // })
-      .catch((error) => console.log(error));
+
+      .catch((error) => {
+        let errorMessage = "Deleting failed";
+
+        if (error.response?.status === 401 || error.message.includes("401")) {
+          navigate("/signin", { state: { from: location } });
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        }
+
+        console.error("Error updating task:", error);
+        setModalMessage(errorMessage);
+        setIsModalOpen(true);
+      });
   };
 
   const [editValues, setEditValues] = useState({
@@ -128,6 +149,10 @@ const FetchTask = () => {
   };
 
   const startEditing = (task) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
     setEditingRowId(task._id);
     setEditValues({
       isApproved: task.isApproved,
@@ -138,6 +163,10 @@ const FetchTask = () => {
   };
 
   const saveChanges = async () => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
     const updateData = {
       ...editValues,
       taskId: editingRowId,
@@ -154,7 +183,7 @@ const FetchTask = () => {
       let errorMessage = "Task update failed";
 
       if (error.response?.status === 401 || error.message.includes("401")) {
-        errorMessage = "Login required";
+        navigate("/signin", { state: { from: location } });
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {

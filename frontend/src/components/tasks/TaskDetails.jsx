@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { taskDetailsApi, updateTaskApi } from "../APIrequests/taskAPI";
+import { taskDetailsApi, updateTaskApi } from "../../APIrequests/taskAPI";
 import {
   CheckCircle,
   XCircle,
@@ -15,7 +15,8 @@ import {
   FolderOpenDot,
   Edit2,
 } from "lucide-react";
-import AlertComponent from "./AlertComponent";
+import AlertComponent from "../common/AlertComponent";
+import { useSelector } from "react-redux";
 
 const TaskDetails = () => {
   const { taskId } = useParams();
@@ -30,6 +31,11 @@ const TaskDetails = () => {
   });
   const [alert, setAlert] = useState(null);
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { userAuth } = useSelector((state) => state.auth);
+  const isAuthenticated = userAuth?.data?.isAuthenticated === true;
+  // navigate("/signin", { state: { from: location } });
   const {
     error,
     isLoading,
@@ -49,19 +55,17 @@ const TaskDetails = () => {
       setAlert({ type: "success", message: "Task updated successfully!" });
     },
     onError: (error) => {
-      setAlert({
-        type: "error",
-        message: (() => {
-          if (error.response?.status === 401 || error.message.includes("401")) {
-            return "Login required";
-          } else if (error.response?.data?.error) {
-            return error.response.data.error;
-          } else if (error.response?.data?.message) {
-            return error.response.data.message;
-          }
-          return "An unexpected error occurred";
-        })(),
-      });
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        navigate("/signin", { state: { from: location } });
+      } else {
+        setAlert({
+          type: "error",
+          message:
+            error.response?.data?.error ||
+            error.response?.data?.message ||
+            "An unexpected error occurred",
+        });
+      }
     },
   });
 
@@ -70,6 +74,10 @@ const TaskDetails = () => {
   };
 
   const startEditing = (task) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
     setEditValues({
       isApproved: task.isApproved,
       isPaid: task.isPaid,
@@ -82,6 +90,10 @@ const TaskDetails = () => {
   };
 
   const saveChanges = () => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
     taskMutation.mutate({ ...editValues, taskId });
   };
 

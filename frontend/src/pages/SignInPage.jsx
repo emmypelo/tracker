@@ -1,5 +1,5 @@
 
-import SignIn from "../components/SignIn";
+import SignIn from "../components/auth/SignIn";
 
 const SignInPage = () => {
   return (

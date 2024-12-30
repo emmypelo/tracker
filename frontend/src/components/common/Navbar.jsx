@@ -3,9 +3,9 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { checkAuthApi, logoutApi } from "../APIrequests/userAPI";
-import { login, logout } from "../redux/slices/authSlices";
-import logo from "../images/logo.png";
+import { checkAuthApi, logoutApi } from "../../APIrequests/userAPI";
+import { login, logout } from "../../redux/slices/authSlices";
+import logo from "../../images/logo.png";
 import { FaSignOutAlt, FaUser } from "react-icons/fa";
 
 const Navbar = () => {

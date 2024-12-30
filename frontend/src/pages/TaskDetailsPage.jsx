@@ -1,7 +1,7 @@
-import TaskDetails from "../components/taskDetails";
+import TaskDetails from "../components/tasks/TaskDetails";
 
 const TaskDetailsPage = () => {
-  return <TaskDetails />
+  return <TaskDetails />;
 };
 
 export default TaskDetailsPage;

@@ -1,4 +1,4 @@
-import FetchTask from "../components/FetchTasks";
+import FetchTask from "../components/tasks/FetchTasks";
 
 const Home = () => {
   return (

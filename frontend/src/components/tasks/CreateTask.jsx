@@ -4,10 +4,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Select from "react-select";
-import { fetchCategoriesApi } from "../APIrequests/categoryAPI";
-import { fetchSubCategoriesApi } from "../APIrequests/subCategoryAPI";
-import { createTaskApi } from "../APIrequests/taskAPI";
-import Modal from "./Modal";
+import { fetchCategoriesApi } from "../../APIrequests/categoryAPI";
+import { fetchSubCategoriesApi } from "../../APIrequests/subCategoryAPI";
+import { createTaskApi } from "../../APIrequests/taskAPI";
+import Modal from "../common/Modal";
 
 const CreateTask = () => {
   const navigate = useNavigate();

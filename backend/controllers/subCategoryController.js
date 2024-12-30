@@ -1,27 +1,17 @@
 import asyncHandler from "express-async-handler";
 import SubCategory from "../models/SubCategory.js";
-
-// Helper function for consistent API responses
-const sendResponse = (
-  res,
-  statusCode,
-  status,
-  message,
-  data = null,
-  error = null
-) => {
-  const response = { status, message };
-  if (data) response.data = data;
-  if (error) response.error = error;
-
-  return res.status(statusCode).json(response);
-};
+import { sendResponse } from "../utilities/sendResponse.js";
+import { findUser } from "../utilities/findUser.js";
 
 const subCategoryController = {
   // Create a new subcategory
   createSubCategory: asyncHandler(async (req, res) => {
     const { title, description } = req.body;
+    const user = await findUser(req);
 
+    if (!user) {
+      return sendResponse(res, 400, "error", "Not a valid user");
+    }
     try {
       const subCategoryFound = await SubCategory.findOne({ title });
       if (subCategoryFound) {
@@ -30,7 +20,7 @@ const subCategoryController = {
 
       const subCategoryCreated = await SubCategory.create({
         title,
-        author: req.user,
+        author: user._id,
         description,
       });
 

@@ -1,25 +1,27 @@
 import asyncHandler from "express-async-handler";
-import Category from "../models/Category.js";
-import { sendResponse } from "../utilities/sendResponse.js";
+import { ReportCategory } from "../models/ReportsModels.js";
 import { findUser } from "../utilities/findUser.js";
+import { sendResponse } from "../utilities/sendResponse.js";
 
-const categoryController = {
+const reportCategoryController = {
   // Create a new category
   createCategory: asyncHandler(async (req, res) => {
-    const { category, description } = req.body;
+    const { title, description } = req.body;
+
     const user = await findUser(req);
 
     if (!user) {
       return sendResponse(res, 400, "error", "Not a valid user");
     }
+
     try {
-      const categoryFound = await Category.findOne({ category });
+      const categoryFound = await ReportCategory.findOne({ title });
       if (categoryFound) {
-        return sendResponse(res, 400, "error", "Category already exists");
+        return sendResponse(res, 400, "error", "category already exists");
       }
 
-      const categoryCreated = await Category.create({
-        category,
+      const categoryCreated = await ReportCategory.create({
+        title,
         author: user._id,
         description,
       });
@@ -47,7 +49,7 @@ const categoryController = {
   // Fetch all categories
   fetchAllCategories: asyncHandler(async (req, res) => {
     try {
-      const categories = await Category.find();
+      const categories = await ReportCategory.find();
       return sendResponse(
         res,
         200,
@@ -72,7 +74,7 @@ const categoryController = {
   fetchOneCategory: asyncHandler(async (req, res) => {
     try {
       const categoryId = req.params.categoryId;
-      const category = await Category.findById(categoryId);
+      const category = await ReportCategory.findById(categoryId);
 
       if (!category) {
         return sendResponse(res, 404, "error", "Category not found");
@@ -83,9 +85,7 @@ const categoryController = {
         200,
         "success",
         "Category fetched successfully",
-        {
-          category,
-        }
+        { category }
       );
     } catch (error) {
       console.error("Error fetching category:", error.message);
@@ -104,16 +104,16 @@ const categoryController = {
   updateCategory: asyncHandler(async (req, res) => {
     try {
       const categoryId = req.params.categoryId;
-      const { categoryName, description } = req.body;
+      const { title, description } = req.body;
 
-      const categoryFound = await Category.findById(categoryId);
+      const categoryFound = await ReportCategory.findById(categoryId);
       if (!categoryFound) {
         return sendResponse(res, 404, "error", "Category not found");
       }
 
-      const categoryUpdated = await Category.findByIdAndUpdate(
+      const categoryUpdated = await ReportCategory.findByIdAndUpdate(
         categoryId,
-        { categoryName, description },
+        { title, description },
         { new: true }
       );
 
@@ -142,12 +142,12 @@ const categoryController = {
     try {
       const categoryId = req.params.categoryId;
 
-      const category = await Category.findById(categoryId);
+      const category = await ReportCategory.findById(categoryId);
       if (!category) {
         return sendResponse(res, 404, "error", "Category not found");
       }
 
-      await Category.findByIdAndDelete(categoryId);
+      await ReportCategory.findByIdAndDelete(categoryId);
       return sendResponse(res, 200, "success", "Category deleted successfully");
     } catch (error) {
       console.error("Error deleting category:", error.message);
@@ -163,4 +163,4 @@ const categoryController = {
   }),
 };
 
-export default categoryController;
+export default reportCategoryController;

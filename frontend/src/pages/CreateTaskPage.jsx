@@ -1,5 +1,5 @@
 // import CreatePost from "../components/CreatePost";
-import CreateTask from "../components/CreateTAsk";
+import CreateTask from "../components/tasks/CreateTask";
 
 const CreateTaskPage = () => {
   return <CreateTask />;

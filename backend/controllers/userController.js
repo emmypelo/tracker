@@ -8,22 +8,7 @@ import passport from "passport";
 import crypto from "crypto";
 import User from "../models/User.js";
 import sendPasswordMail from "../utilities/sendPasswordMail.js";
-
-// Helper function for sending consistent API responses
-const sendResponse = (
-  res,
-  statusCode,
-  status,
-  message,
-  data = null,
-  error = null
-) => {
-  const response = { status, message };
-  if (data) response.data = data;
-  if (error) response.error = error;
-
-  return res.status(statusCode).json(response);
-};
+import { sendResponse } from "../utilities/sendResponse.js";
 
 const userController = {
   // Check if user exists

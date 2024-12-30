@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { registerUserApi, checkUserApi } from "../APIrequests/userAPI";
+import { registerUserApi, checkUserApi } from "../../APIrequests/userAPI";
 
 const InputField = ({
   label,

@@ -1,12 +1,13 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ErrorBoundary from "./components/ErrorBoundary";
-import Loading from "./components/Loading";
-import Navbar from "./components/Navbar";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+import Loading from "./components/common/Loading";
+import Navbar from "./components/common/Navbar";
 import "../src/index.css";
 import "../src/App.css";
-import TaskDetailsPage from "./pages/TaskDetailsPage";
-// Lazy load components
+
+
+// Lazy load all components
 const Home = lazy(() => import("./pages/Home"));
 const SignInPage = lazy(() => import("./pages/SignInPage"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
@@ -14,6 +15,12 @@ const CategoryPage = lazy(() => import("./pages/CategoryPage"));
 const CreateTaskPage = lazy(() => import("./pages/CreateTaskPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const TaskDetailsPage = lazy(() => import("./pages/TaskDetailsPage"));
+const AddRegionPage = lazy(() => import("./pages/AddRegionPage"));
+const AddStationPage = lazy(() => import("./pages/AddStationPage"));
+const CreateReportPage = lazy(() => import("./pages/CreateReportPage"));
+const ReportCategoryPage = lazy(() => import("./pages/ReportCategoryPage"));
+
 
 const App = () => {
   return (
@@ -38,6 +45,16 @@ const App = () => {
                   element={<ResetPasswordPage />}
                 />
                 <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
+                <Route path="/addregion" element={<AddRegionPage />} />
+                <Route path="/addstation" element={<AddStationPage />} />
+                <Route
+                  path="/reportcategory"
+                  element={<ReportCategoryPage />}
+                />
+                <Route
+                  path="/report"
+                  element={<CreateReportPage />}
+                />
               </Routes>
             </Suspense>
           </main>
