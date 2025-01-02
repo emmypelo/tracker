@@ -37,7 +37,7 @@ const stationController = {
 
       return sendResponse(res, 201, "success", "Station created successfully", {
         station: stationCreated,
-      });
+      }).populate("region");
     } catch (error) {
       console.error("Error creating station:", error.message);
       return sendResponse(

@@ -18,64 +18,30 @@ const CreateReport = () => {
   const [filteredStations, setFilteredStations] = useState([]);
 
   const reportMutation = useMutation({
-    mutationKey: ["createReport"],
     mutationFn: createReportApi,
+    onSuccess: () => {
+      setIsError(false);
+      setModalMessage("Report created successfully");
+      setIsModalOpen(true);
+    },
+    onError: (error) => {
+      setIsError(true);
+      let errorMessage = "Report creation failed";
+
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        errorMessage = "Login required";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
+    },
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [isError, setIsError] = useState(false);
-
-  const formik = useFormik({
-    initialValues: {
-      title: "",
-      region: "",
-      reportCategory: "",
-      description: "",
-      station: [],
-      pump: "",
-    },
-    validationSchema: Yup.object({
-      title: Yup.string().required("Title is required"),
-      region: Yup.string().required("Region is required"),
-      reportCategory: Yup.string().required("Report Category is required"),
-      description: Yup.string(),
-      status: Yup.string().required("Status is required"),
-      station: Yup.array()
-        .min(1, "At least one station is required")
-        .max(1, "One station is required"),
-      comment: Yup.string(),
-      pump: Yup.string().when("reportCategory", {
-        is: (value) => value === "Pumps",
-        then: Yup.string().required(
-          "Pump is required when Pumps category is selected"
-        ),
-        otherwise: Yup.string(),
-      }),
-    }),
-    onSubmit: async (values) => {
-      try {
-        await reportMutation.mutateAsync(values);
-        console.log("Submitted values:", values);
-        setIsError(false);
-        setModalMessage("Report created successfully");
-        setIsModalOpen(true);
-      } catch (error) {
-        setIsError(true);
-        let errorMessage = "Report creation failed";
-
-        if (error.response?.status === 401 || error.message.includes("401")) {
-          errorMessage = "Login required";
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        }
-
-        console.error("Error creating report:", error);
-        setModalMessage(errorMessage);
-        setIsModalOpen(true);
-      }
-    },
-  });
 
   const { data: regionsData } = useQuery({
     queryKey: ["fetchRegions"],
@@ -91,11 +57,56 @@ const CreateReport = () => {
     queryKey: ["fetchStations"],
     queryFn: fetchStationsApi,
   });
-  console.log(regionsData, reportCategoriesData, stationsData);
+
+  const formik = useFormik({
+    initialValues: {
+      title: "",
+      region: "",
+      reportCategory: "",
+      description: "",
+      station: [],
+      pump: "",
+    },
+    validationSchema: Yup.object({
+      title: Yup.string().required("Title is required"),
+      region: Yup.string().required("Region is required"),
+      reportCategory: Yup.string().required("Report Category is required"),
+      description: Yup.string(),
+      station: Yup.array()
+        .min(1, "At least one station is required")
+        .max(1, "One station is required"),
+      pump: Yup.string().when("reportCategory", {
+        is: (category) => {
+          const pumpCategory = reportCategoriesData?.data?.categories?.find(
+            (c) => c.title === "Pumps"
+          );
+          return category === pumpCategory?._id;
+        },
+        then: () =>
+          Yup.string().required(
+            "Pump is required when Pumps category is selected"
+          ),
+        otherwise: () => Yup.string(),
+      }),
+    }),
+    onSubmit: async (values) => {
+      try {
+        const formattedValues = {
+          ...values,
+          station: values.station[0],
+        };
+
+        await reportMutation.mutateAsync(formattedValues);
+      } catch (error) {
+        console.error("Error in form submission:", error);
+      }
+    },
+  });
+
   useEffect(() => {
-    if (selectedRegion && stationsData) {
+    if (selectedRegion && stationsData?.data?.stations) {
       const stations = stationsData.data.stations.filter(
-        (station) => station.region === selectedRegion
+        (station) => station.region._id === selectedRegion
       );
       setFilteredStations(stations);
     }
@@ -120,7 +131,11 @@ const CreateReport = () => {
   return (
     <div className="flex flex-col w-full items-center mx-auto">
       <form
-        onSubmit={formik.handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault();
+
+          formik.handleSubmit(e);
+        }}
         className="relative w-full space-y-2 p-6"
       >
         <h2 className="text-2xl font-bold text-slate-800 text-center capitalize">
@@ -163,7 +178,7 @@ const CreateReport = () => {
               id="region"
               options={regionsData?.data?.regions?.map((region) => ({
                 value: region._id,
-                label: region.name,
+                label: region.title,
               }))}
               onChange={(option) => {
                 formik.setFieldValue("region", option.value);
@@ -199,10 +214,10 @@ const CreateReport = () => {
             {renderError("reportCategory")}
             <Select
               id="reportCategory"
-              options={reportCategoriesData?.data?.reportCategories?.map(
+              options={reportCategoriesData?.data?.categories?.map(
                 (category) => ({
                   value: category._id,
-                  label: category.name,
+                  label: category.title,
                 })
               )}
               onChange={(option) => {
@@ -263,17 +278,21 @@ const CreateReport = () => {
             {renderError("station")}
             <Select
               id="station"
-              isMulti
+              isMulti={false}
               options={filteredStations.map((station) => ({
                 value: station._id,
                 label: station.name,
               }))}
-              onChange={(options) =>
-                formik.setFieldValue(
-                  "station",
-                  options.map((option) => option.value)
-                )
+              onChange={(option) =>
+                formik.setFieldValue("station", [option.value])
               }
+              value={formik.values.station
+                .map((stationId) =>
+                  filteredStations.find((station) => station._id === stationId)
+                )
+                .map((station) =>
+                  station ? { value: station._id, label: station.name } : null
+                )}
               isDisabled={!selectedRegion}
               className={`${
                 formik.touched.station && formik.errors.station
@@ -294,7 +313,9 @@ const CreateReport = () => {
           </div>
 
           {/* Pump Input (Conditional) */}
-          {selectedCategory === "Pumps" && (
+          {reportCategoriesData?.data?.categories?.find(
+            (c) => c._id === selectedCategory
+          )?.title === "Pumps" && (
             <div className="relative">
               <label
                 htmlFor="pump"

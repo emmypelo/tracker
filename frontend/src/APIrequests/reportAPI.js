@@ -2,8 +2,8 @@ import axios from "axios";
 
 const baseUrl = "http://localhost:3000/api/reports";
 // ? create Task API
-export const createReportApi = async (reportData) => {
-  const { data } = await axios.post(`${baseUrl}/create`, reportData, {
+export const createReportApi = async (values) => {
+  const { data } = await axios.post(`${baseUrl}/create`, values, {
     withCredentials: true,
   });
   return data;
