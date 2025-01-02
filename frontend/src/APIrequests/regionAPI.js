@@ -11,7 +11,7 @@ export const addRegionApi = async (regionData) => {
 
 export const fetchRegionsApi = async (filters) => {
   const { data } = await axios.get(`${baseUrl}`, { params: filters });
-  console.log(data);
+
   return data;
 };
 
@@ -28,7 +28,7 @@ export const updateRegionApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -36,6 +36,6 @@ export const deleteRegionApi = async (regionId) => {
   const { data } = await axios.delete(`${baseUrl}/${regionId}`, {
     withCredentials: true,
   });
-  console.log(data);
+
   return data;
 };

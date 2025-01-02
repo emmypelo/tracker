@@ -47,7 +47,7 @@ const CreateTask = () => {
     onSubmit: async (values) => {
       try {
         await taskMutation.mutateAsync(values);
-        console.log("Submitted values:", values);
+
         setIsError(false);
         setModalMessage("Task created successfully");
         setIsModalOpen(true);
@@ -61,7 +61,6 @@ const CreateTask = () => {
           errorMessage = error.response.data.message;
         }
 
-        console.error("Error creating task:", error);
         setModalMessage(errorMessage);
         setIsModalOpen(true);
       }

@@ -17,7 +17,6 @@ const isAdmin = async (req, res, next) => {
     // If the user is an admin or head, allow them to proceed
     next();
   } catch (error) {
-    console.error("Error checking user role:", error);
     res.status(500).json({
       status: "error",
       message: "Internal Server Error",

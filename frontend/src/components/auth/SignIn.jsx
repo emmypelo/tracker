@@ -76,7 +76,6 @@ const SignIn = () => {
           navigate("/");
         }
       } catch (error) {
-        console.error("Login failed", error);
       } finally {
         setSubmitting(false);
       }

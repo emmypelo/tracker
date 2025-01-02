@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -32,9 +31,7 @@ const Navbar = () => {
     try {
       await logoutMutation.mutateAsync();
       dispatch(logout());
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+    } catch (error) {}
   };
 
   const name =

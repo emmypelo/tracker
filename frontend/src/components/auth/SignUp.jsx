@@ -69,7 +69,6 @@ const SignUp = () => {
             const response = await checkUserApi(value);
             return !response.userExists; // Return true if the user doesn't exist
           } catch (error) {
-            console.error(error);
             return false; // Treat any error as if the email exists (to be safe)
           }
         }),
@@ -84,9 +83,7 @@ const SignUp = () => {
       try {
         await registerUserMutation.mutateAsync(values);
         navigate("/");
-      } catch (error) {
-        console.error("Registration failed:", error);
-      }
+      } catch (error) {}
     },
   });
 

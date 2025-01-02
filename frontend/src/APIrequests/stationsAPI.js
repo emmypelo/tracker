@@ -14,7 +14,7 @@ export const fetchStationsApi = async () => {
     `${baseUrl}`
     // { withCredentials: true }
   );
-  console.log(data);
+  
   return data;
 };
 
@@ -31,7 +31,7 @@ export const updateStationApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+  
   return data;
 };
 
@@ -39,6 +39,6 @@ export const deletePostApi = async (stationId) => {
   const { data } = await axios.delete(`${baseUrl}/${stationId}`, {
     withCredentials: true,
   });
-  console.log(data);
+  
   return data;
 };

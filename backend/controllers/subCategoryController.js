@@ -32,7 +32,6 @@ const subCategoryController = {
         { subCategory: subCategoryCreated }
       );
     } catch (error) {
-      console.error("Error creating subcategory:", error.message);
       return sendResponse(
         res,
         500,
@@ -56,7 +55,6 @@ const subCategoryController = {
         { subCategories }
       );
     } catch (error) {
-      console.error("Error fetching subcategories:", error.message);
       return sendResponse(
         res,
         500,
@@ -86,7 +84,6 @@ const subCategoryController = {
         { subCategory }
       );
     } catch (error) {
-      console.error("Error fetching subcategory:", error.message);
       return sendResponse(
         res,
         500,
@@ -123,7 +120,6 @@ const subCategoryController = {
         { subCategory: subCategoryUpdated }
       );
     } catch (error) {
-      console.error("Error updating subcategory:", error.message);
       return sendResponse(
         res,
         500,
@@ -153,7 +149,6 @@ const subCategoryController = {
         "Subcategory deleted successfully"
       );
     } catch (error) {
-      console.error("Error deleting subcategory:", error.message);
       return sendResponse(
         res,
         500,

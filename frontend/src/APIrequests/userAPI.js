@@ -23,7 +23,6 @@ export const checkUserApi = async (email) => {
     );
     return data; // Return the entire data object
   } catch (error) {
-    console.error("Error checking user existence:", error);
     throw error; // Rethrow the error to be handled in the Yup validation
   }
 };

@@ -66,7 +66,6 @@ const reportController = {
         report: reportCreated,
       });
     } catch (error) {
-      console.error("Error creating report:", error);
       return sendResponse(
         res,
         500,
@@ -121,7 +120,6 @@ const reportController = {
         reports,
       });
     } catch (error) {
-      console.error("Error fetching reports:", error);
       return sendResponse(
         res,
         500,
@@ -150,7 +148,6 @@ const reportController = {
         report,
       });
     } catch (error) {
-      console.error("Error fetching report:", error);
       return sendResponse(
         res,
         500,
@@ -221,7 +218,6 @@ const reportController = {
         report: reportUpdated,
       });
     } catch (error) {
-      console.error("Error updating report:", error);
       return sendResponse(
         res,
         500,
@@ -269,7 +265,6 @@ const reportController = {
 
       return sendResponse(res, 200, "success", "Report deleted successfully");
     } catch (error) {
-      console.error("Error deleting report:", error);
       return sendResponse(
         res,
         500,

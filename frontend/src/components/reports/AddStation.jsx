@@ -22,7 +22,7 @@ const AddStation = () => {
     queryKey: ["regions"],
     queryFn: fetchRegionsApi,
   });
-  console.log(regions);
+
   const mutation = useMutation({
     mutationKey: ["add-station"],
     mutationFn: (values) => addStationApi(values),

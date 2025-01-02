@@ -221,7 +221,6 @@
 //   );
 // }
 
-
 // import { useState, useEffect } from "react";
 // import { useMutation, useQuery } from "@tanstack/react-query";
 // import { fetchTasksApi, updateTaskApi } from "../APIrequests/taskAPI";
@@ -552,9 +551,6 @@
 
 // export default FetchTask;
 
-
-
-
 // import { useState, useEffect } from "react";
 // import { useQuery } from "@tanstack/react-query";
 // import { fetchTasksApi, updateTaskApi } from "../APIrequests/taskAPI";
@@ -660,7 +656,7 @@
 //       setEditValues({});
 //       taskRefetch(); // Refetch tasks after saving changes
 //     } catch (error) {
-//       console.error("Failed to update task:", error);
+//
 //     }
 //   };
 

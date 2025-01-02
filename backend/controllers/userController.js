@@ -21,7 +21,6 @@ const userController = {
         userExists: Boolean(userExist),
       });
     } catch (error) {
-      console.error("Error checking user existence:", error);
       return sendResponse(
         res,
         500,
@@ -64,7 +63,6 @@ const userController = {
         user: newUser,
       });
     } catch (error) {
-      console.error("Error creating user:", error.message);
       return sendResponse(
         res,
         500,
@@ -180,7 +178,6 @@ const userController = {
         `Password reset email sent to ${email}`
       );
     } catch (error) {
-      console.error("Error in forgotPassword:", error);
       return sendResponse(
         res,
         500,
@@ -230,7 +227,6 @@ const userController = {
 
       return sendResponse(res, 200, "success", "Password successfully reset");
     } catch (error) {
-      console.error("Error in resetPassword:", error);
       return sendResponse(
         res,
         500,

@@ -56,7 +56,6 @@ const taskController = {
         task: taskCreated,
       });
     } catch (error) {
-      console.error("Error creating task:", error);
       return sendResponse(
         res,
         500,
@@ -124,7 +123,6 @@ const taskController = {
         tasks,
       });
     } catch (error) {
-      console.error("Error fetching tasks:", error);
       return sendResponse(
         res,
         500,
@@ -153,7 +151,6 @@ const taskController = {
         task,
       });
     } catch (error) {
-      console.error("Error fetching task:", error);
       return sendResponse(
         res,
         500,
@@ -179,7 +176,7 @@ const taskController = {
 
       // Check user permission to update the task
       const canUpdate = user._id.toString() === taskFound.handler.toString();
-      console.log(user._id, taskFound.handler);
+
       if (!canUpdate) {
         return sendResponse(
           res,
@@ -221,7 +218,6 @@ const taskController = {
         task: taskUpdated,
       });
     } catch (error) {
-      console.error("Error updating task:", error);
       return sendResponse(
         res,
         500,
@@ -247,7 +243,7 @@ const taskController = {
 
       // Check user permission to update the task
       const canDelete = user._id.toString() === taskFound.handler.toString();
-      console.log(user._id, taskFound.handler);
+
       if (!canDelete) {
         return sendResponse(
           res,
@@ -260,7 +256,6 @@ const taskController = {
       await Task.findByIdAndDelete(taskId);
       return sendResponse(res, 200, "success", "Task deleted successfully");
     } catch (error) {
-      console.error("Error deleting task:", error);
       return sendResponse(
         res,
         500,

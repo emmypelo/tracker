@@ -31,7 +31,6 @@ const regionController = {
         region: regionCreated,
       });
     } catch (error) {
-      console.error("Error creating region:", error.message);
       return sendResponse(
         res,
         500,
@@ -53,7 +52,6 @@ const regionController = {
         regions,
       });
     } catch (error) {
-      console.error("Error fetching regions:", error.message);
       return sendResponse(
         res,
         500,
@@ -80,7 +78,6 @@ const regionController = {
         region,
       });
     } catch (error) {
-      console.error("Error fetching region:", error.message);
       return sendResponse(
         res,
         500,
@@ -113,7 +110,6 @@ const regionController = {
         region: updatedRegion,
       });
     } catch (error) {
-      console.error("Error updating region:", error.message);
       return sendResponse(
         res,
         500,
@@ -138,7 +134,6 @@ const regionController = {
       await Region.findByIdAndDelete(regionId);
       return sendResponse(res, 200, "success", "Region deleted successfully");
     } catch (error) {
-      console.error("Error deleting region:", error.message);
       return sendResponse(
         res,
         500,

@@ -34,7 +34,6 @@ const reportCategoryController = {
         { category: categoryCreated }
       );
     } catch (error) {
-      console.error("Error creating category:", error.message);
       return sendResponse(
         res,
         500,
@@ -58,7 +57,6 @@ const reportCategoryController = {
         { categories }
       );
     } catch (error) {
-      console.error("Error fetching categories:", error.message);
       return sendResponse(
         res,
         500,
@@ -88,7 +86,6 @@ const reportCategoryController = {
         { category }
       );
     } catch (error) {
-      console.error("Error fetching category:", error.message);
       return sendResponse(
         res,
         500,
@@ -125,7 +122,6 @@ const reportCategoryController = {
         { category: categoryUpdated }
       );
     } catch (error) {
-      console.error("Error updating category:", error.message);
       return sendResponse(
         res,
         500,
@@ -150,7 +146,6 @@ const reportCategoryController = {
       await ReportCategory.findByIdAndDelete(categoryId);
       return sendResponse(res, 200, "success", "Category deleted successfully");
     } catch (error) {
-      console.error("Error deleting category:", error.message);
       return sendResponse(
         res,
         500,

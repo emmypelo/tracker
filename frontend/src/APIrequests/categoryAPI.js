@@ -14,7 +14,7 @@ export const fetchCategoriesApi = async () => {
     `${baseUrl}`
     // { withCredentials: true }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -31,7 +31,7 @@ export const updateCategoryApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -39,6 +39,6 @@ export const updateCategoryApi = async (updateData) => {
 //   const { data } = await axios.delete(`${baseUrl}/${categoryId}`, {
 //     withCredentials: true,
 //   });
-//   console.log(data);
+//
 //   return data;
 // };

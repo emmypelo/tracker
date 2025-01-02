@@ -11,7 +11,7 @@ export const createTaskApi = async (postData) => {
 
 export const fetchTasksApi = async (filters) => {
   const { data } = await axios.get(`${baseUrl}`, { params: filters });
-  console.log(data);
+
   return data;
 };
 
@@ -28,7 +28,7 @@ export const updateTaskApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -36,6 +36,6 @@ export const deleteTaskApi = async (taskId) => {
   const { data } = await axios.delete(`${baseUrl}/${taskId}`, {
     withCredentials: true,
   });
-  console.log(data);
+
   return data;
 };

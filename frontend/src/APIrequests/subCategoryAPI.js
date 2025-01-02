@@ -27,7 +27,7 @@ export const updateSubCategoryApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -35,6 +35,6 @@ export const deleteSubCategoryApi = async (subCategoryId) => {
   const { data } = await axios.delete(`${baseUrl}/${subCategoryId}`, {
     withCredentials: true,
   });
-  console.log(data);
+
   return data;
 };

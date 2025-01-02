@@ -70,10 +70,10 @@ const CreateReport = () => {
     validationSchema: Yup.object({
       title: Yup.string().required("Title is required"),
       region: Yup.string().required("Region is required"),
-      reportCategory: Yup.string().required("Report Category is required"),
+      reportCategory: Yup.string().required("Category is required"),
       description: Yup.string(),
       station: Yup.array()
-        .min(1, "At least one station is required")
+        .min(1, "Station is required")
         .max(1, "One station is required"),
       pump: Yup.string().when("reportCategory", {
         is: (category) => {
@@ -82,10 +82,7 @@ const CreateReport = () => {
           );
           return category === pumpCategory?._id;
         },
-        then: () =>
-          Yup.string().required(
-            "Pump is required when Pumps category is selected"
-          ),
+        then: () => Yup.string().required("Pump info required"),
         otherwise: () => Yup.string(),
       }),
     }),
@@ -124,7 +121,7 @@ const CreateReport = () => {
     setIsModalOpen(false);
     if (!isError) {
       formik.resetForm();
-      navigate("/");
+      navigate("/reports");
     }
   };
 
@@ -147,7 +144,7 @@ const CreateReport = () => {
           <div className="relative">
             <label
               htmlFor="title"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-1 text-left"
             >
               Title
             </label>
@@ -169,7 +166,7 @@ const CreateReport = () => {
           <div className="relative">
             <label
               htmlFor="region"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-1 text-left"
             >
               Region
             </label>
@@ -202,76 +199,11 @@ const CreateReport = () => {
               }}
             />
           </div>
-
-          {/* Report Category Select */}
-          <div className="relative">
-            <label
-              htmlFor="reportCategory"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Report Category
-            </label>
-            {renderError("reportCategory")}
-            <Select
-              id="reportCategory"
-              options={reportCategoriesData?.data?.categories?.map(
-                (category) => ({
-                  value: category._id,
-                  label: category.title,
-                })
-              )}
-              onChange={(option) => {
-                formik.setFieldValue("reportCategory", option.value);
-                setSelectedCategory(option.value);
-                if (option.label !== "Pumps") {
-                  formik.setFieldValue("pump", "");
-                }
-              }}
-              className={`${
-                formik.touched.reportCategory && formik.errors.reportCategory
-                  ? "border-red-500"
-                  : ""
-              }`}
-              styles={{
-                control: (baseStyles) => ({
-                  ...baseStyles,
-                  borderColor:
-                    formik.touched.reportCategory &&
-                    formik.errors.reportCategory
-                      ? "#ef4444"
-                      : "#d1d5db",
-                  boxShadow: "none",
-                }),
-              }}
-            />
-          </div>
-
-          {/* Description Input */}
-          <div className="relative">
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Description
-            </label>
-            {renderError("description")}
-            <textarea
-              id="description"
-              placeholder="Enter description"
-              {...formik.getFieldProps("description")}
-              className={`w-full p-2.5 border rounded-md ${
-                formik.touched.description && formik.errors.description
-                  ? "border-red-500"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
-
           {/* Station Select */}
           <div className="relative">
             <label
               htmlFor="station"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="block text-sm font-medium text-gray-700 mb-1 text-left"
             >
               Station
             </label>
@@ -311,7 +243,48 @@ const CreateReport = () => {
               }}
             />
           </div>
-
+          {/* Report Category Select */}
+          <div className="relative">
+            <label
+              htmlFor="reportCategory"
+              className="block text-sm font-medium text-gray-700 mb-1 text-left"
+            >
+              Report Category
+            </label>
+            {renderError("reportCategory")}
+            <Select
+              id="reportCategory"
+              options={reportCategoriesData?.data?.categories?.map(
+                (category) => ({
+                  value: category._id,
+                  label: category.title,
+                })
+              )}
+              onChange={(option) => {
+                formik.setFieldValue("reportCategory", option.value);
+                setSelectedCategory(option.value);
+                if (option.label !== "Pumps") {
+                  formik.setFieldValue("pump", "");
+                }
+              }}
+              className={`${
+                formik.touched.reportCategory && formik.errors.reportCategory
+                  ? "border-red-500"
+                  : ""
+              }`}
+              styles={{
+                control: (baseStyles) => ({
+                  ...baseStyles,
+                  borderColor:
+                    formik.touched.reportCategory &&
+                    formik.errors.reportCategory
+                      ? "#ef4444"
+                      : "#d1d5db",
+                  boxShadow: "none",
+                }),
+              }}
+            />
+          </div>
           {/* Pump Input (Conditional) */}
           {reportCategoriesData?.data?.categories?.find(
             (c) => c._id === selectedCategory
@@ -319,7 +292,7 @@ const CreateReport = () => {
             <div className="relative">
               <label
                 htmlFor="pump"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 mb-1 text-left"
               >
                 Pump
               </label>
@@ -337,6 +310,27 @@ const CreateReport = () => {
               />
             </div>
           )}
+
+          {/* Description Input */}
+          <div className="relative">
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-1 text-left"
+            >
+              Description
+            </label>
+            {renderError("description")}
+            <textarea
+              id="description"
+              placeholder="Enter description"
+              {...formik.getFieldProps("description")}
+              className={`w-full p-2.5 border rounded-md ${
+                formik.touched.description && formik.errors.description
+                  ? "border-red-500"
+                  : "border-gray-300"
+              }`}
+            />
+          </div>
         </div>
 
         <button

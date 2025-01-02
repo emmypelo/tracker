@@ -50,10 +50,9 @@ const sendPasswordMail = async (to, token) => {
 
     // 3. Send the email
     const info = await transporter.sendMail(message);
-    console.log("Email sent", info.messageId);
+
     return info;
   } catch (error) {
-    console.error("Email sending failed:", error);
     throw new Error("Email sending failed");
   }
 };

@@ -106,7 +106,6 @@ const FetchTask = () => {
         errorMessage = error.response.data.error;
       }
 
-      console.error("Error updating task:", error);
       setModalMessage(errorMessage);
       setIsModalOpen(true);
     },
@@ -131,7 +130,6 @@ const FetchTask = () => {
           errorMessage = error.response.data.error;
         }
 
-        console.error("Error updating task:", error);
         setModalMessage(errorMessage);
         setIsModalOpen(true);
       });
@@ -174,7 +172,7 @@ const FetchTask = () => {
 
     try {
       await taskMutation.mutateAsync(updateData);
-      console.log("Task updated successfully:", updateData);
+
       setIsError(false);
       setModalMessage("Task updated successfully");
       setIsModalOpen(true);
@@ -190,7 +188,6 @@ const FetchTask = () => {
         errorMessage = error.response.data.message;
       }
 
-      console.error("Error updating task:", error);
       setModalMessage(errorMessage);
       setIsModalOpen(true);
     } finally {

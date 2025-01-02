@@ -80,7 +80,6 @@ const ForgotPassword = () => {
       try {
         await ForgotPasswordMutation.mutateAsync(values.email);
       } catch (error) {
-        console.error("Request failed", error);
       } finally {
         setSubmitting(false);
       }

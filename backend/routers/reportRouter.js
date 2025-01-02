@@ -8,8 +8,8 @@ const reportRouter = Router();
 reportRouter
   .post("/create", isAuthenticated, reportController.createReport)
   .get("/", reportController.fetchAllReports)
-  .get("/:taskId", reportController.fetchOneReport)
-  .patch("/:taskId", isAuthenticated, reportController.updateReport)
-  .delete("/:taskId", isAuthenticated, reportController.deleteReport);
+  .get("/:reportId", reportController.fetchOneReport)
+  .patch("/:reportId", isAuthenticated, reportController.updateReport)
+  .delete("/:reportId", isAuthenticated, reportController.deleteReport);
 
 export default reportRouter;

@@ -11,7 +11,7 @@ export const createReportApi = async (values) => {
 
 export const fetchReportsApi = async (filters) => {
   const { data } = await axios.get(`${baseUrl}`, { params: filters });
-  console.log(data);
+
   return data;
 };
 
@@ -28,7 +28,7 @@ export const updateReportApi = async (updateData) => {
       withCredentials: true,
     }
   );
-  console.log(data);
+
   return data;
 };
 
@@ -36,6 +36,6 @@ export const deleteReportApi = async (reportId) => {
   const { data } = await axios.delete(`${baseUrl}/${reportId}`, {
     withCredentials: true,
   });
-  console.log(data);
+
   return data;
 };

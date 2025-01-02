@@ -39,7 +39,6 @@ const stationController = {
         station: stationCreated,
       }).populate("region");
     } catch (error) {
-      console.error("Error creating station:", error.message);
       return sendResponse(
         res,
         500,
@@ -65,7 +64,6 @@ const stationController = {
         }
       );
     } catch (error) {
-      console.error("Error fetching stations:", error.message);
       return sendResponse(
         res,
         500,
@@ -92,7 +90,6 @@ const stationController = {
         station,
       });
     } catch (error) {
-      console.error("Error fetching station:", error.message);
       return sendResponse(
         res,
         500,
@@ -138,7 +135,6 @@ const stationController = {
         station: updatedStation,
       });
     } catch (error) {
-      console.error("Error updating station:", error.message);
       return sendResponse(
         res,
         500,
@@ -168,7 +164,6 @@ const stationController = {
       await Station.findByIdAndDelete(stationId);
       return sendResponse(res, 200, "success", "Station deleted successfully");
     } catch (error) {
-      console.error("Error deleting station:", error.message);
       return sendResponse(
         res,
         500,

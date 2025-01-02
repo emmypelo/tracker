@@ -62,7 +62,6 @@ const FetchTask = () => {
   };
 
   const handleSaveClick = () => {
-    console.log("Updated Task:", editedTask); // Implement actual API call here
     setEditRowId(null);
   };
 
