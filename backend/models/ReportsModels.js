@@ -55,7 +55,7 @@ const reportSchema = new Schema(
       enum: ["Open", "In Progress", "Closed"],
       default: "Open",
     },
-    station: [{ type: Schema.Types.ObjectId, ref: "Station", required: true }],
+    station: { type: Schema.Types.ObjectId, ref: "Station", required: true },
     comment: { type: String },
     pump: { type: String },
   },

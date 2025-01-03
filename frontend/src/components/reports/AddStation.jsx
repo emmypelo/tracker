@@ -141,7 +141,7 @@ const AddStation = () => {
             >
               <option value="">Select a region</option>
               {regions?.data?.regions.map((region) => (
-                <option key={regions._id} value={region._id}>
+                <option key={region._id} value={region._id}>
                   {region.title}
                 </option>
               ))}

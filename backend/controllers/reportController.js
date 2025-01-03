@@ -14,6 +14,7 @@ const reportController = {
   createReport: asyncHandler(async (req, res) => {
     const {
       title,
+      pump,
       region,
       reportCategory,
       description,
@@ -54,7 +55,8 @@ const reportController = {
         reportCategory,
         description,
         status,
-        station: [station],
+        pump,
+        station,
         comment,
       });
 
@@ -78,9 +80,17 @@ const reportController = {
   }),
 
   // Fetch all reports
+
   fetchAllReports: asyncHandler(async (req, res) => {
-    const { region, reportCategory, title, status, startDate, endDate } =
-      req.query;
+    const {
+      region,
+      reportCategory,
+      title,
+      status,
+      station,
+      startDate,
+      endDate,
+    } = req.query;
 
     // Basic filter
     let filter = {};
@@ -95,6 +105,9 @@ const reportController = {
     }
     if (status) {
       filter.status = status;
+    }
+    if (station) {
+      filter.station = station;
     }
 
     // Date filter

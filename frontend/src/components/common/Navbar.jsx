@@ -9,35 +9,54 @@ import { FaSignOutAlt, FaUser } from "react-icons/fa";
 
 const Navbar = () => {
   const dispatch = useDispatch();
-  const { userAuth } = useSelector((state) => state.auth);
+  const { userAuth, isLoading } = useSelector((state) => state.auth);
 
   const logoutMutation = useMutation({
     mutationKey: ["logout"],
     mutationFn: logoutApi,
   });
 
-  const { data: authData } = useQuery({
+  const { data: authData, isLoading: isCheckingAuth } = useQuery({
     queryKey: ["checkauth"],
     queryFn: checkAuthApi,
   });
 
   useEffect(() => {
-    if (authData) {
-      dispatch(login(authData));
+    if (!isCheckingAuth) {
+      if (authData) {
+        dispatch(login(authData));
+      } else {
+        dispatch(logout());
+      }
     }
-  }, [authData, dispatch]);
+  }, [authData, isCheckingAuth, dispatch]);
 
   const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      dispatch(logout());
-    } catch (error) {}
+    await logoutMutation.mutateAsync();
+    dispatch(logout());
   };
 
-  const name =
-    userAuth?.data?.firstname.slice(0, 1) +
-    " " +
-    userAuth?.data?.lastname.slice(0, 1);
+  const name = userAuth?.data
+    ? `${userAuth.data.firstname.slice(0, 1)} ${userAuth.data.lastname.slice(
+        0,
+        1
+      )}`
+    : "";
+
+  if (isLoading || isCheckingAuth) {
+    return (
+      <nav className="w-full h-[4.5rem] fixed top-0 bg-gray-800 z-10 flex items-center justify-between px-4">
+        {/* Show minimal navbar while loading */}
+        <div className="h-full w-[12%] flex items-center">
+          <img
+            src={logo}
+            alt="logo"
+            className="max-w-full max-h-full object-contain"
+          />
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="w-full h-[4.5rem] fixed top-0 bg-gray-800 z-10 flex items-center justify-between px-4">
@@ -61,14 +80,14 @@ const Navbar = () => {
             </Link>
           </li>
           <li>
-            <Link to="/addcategory" className="hover:text-gray-400">
-              Category
+            <Link to="/manage" className="hover:text-gray-400">
+              Manage
             </Link>
           </li>
         </ul>
       </div>
       <div className="auth w-1/5 flex justify-end items-center">
-        {userAuth ? (
+        {userAuth?.data ? (
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-center gap-1 rounded-full border border-yellow-500 w-[3rem] h-[3rem] justify-center">
               <FaUser fill="white" />

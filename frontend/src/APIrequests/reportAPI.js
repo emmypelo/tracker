@@ -10,7 +10,14 @@ export const createReportApi = async (values) => {
 };
 
 export const fetchReportsApi = async (filters) => {
-  const { data } = await axios.get(`${baseUrl}`, { params: filters });
+  // Remove empty filter values to prevent unnecessary query params
+  const cleanFilters = Object.fromEntries(
+    Object.entries(filters).filter(([value]) => value !== "")
+  );
+
+  const { data } = await axios.get(`${baseUrl}`, {
+    params: cleanFilters,
+  });
 
   return data;
 };

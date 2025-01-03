@@ -100,8 +100,7 @@ const ReportDetails = () => {
   if (error) return <ErrorState error={error} />;
 
   const report = reportData?.data?.report;
-  if (!report || Object.keys(report).length === 0) return <NoReportState />;
-
+  if (!report || Object.keys(report).length === 0) return <NoReportState />
   return (
     <div className="container mx-auto px-4 py-8">
       {alert && (
@@ -179,17 +178,13 @@ const ReportInfoSection = ({ report }) => (
   <div className="mb-6 bg-gray-50 p-4 rounded-lg">
     <p className="text-gray-600 mb-4">{report.description}</p>
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <DetailRow icon={MapPin} label="Region" value={report.region.name} />
+      <DetailRow icon={MapPin} label="Region" value={report.region.title} />
       <DetailRow
         icon={FileText}
         label="Category"
-        value={report.reportCategory.name}
+        value={report.reportCategory.title}
       />
-      <DetailRow
-        icon={User}
-        label="Station"
-        value={report.station.map((s) => s.name).join(", ")}
-      />
+      <DetailRow icon={User} label="Station" value={report?.station?.name} />
       <DetailRow icon={Droplet} label="Pump" value={report.pump || "N/A"} />
     </div>
   </div>
@@ -272,16 +267,8 @@ const ReportDatesSection = ({ report }) => (
   </div>
 );
 
-const CategorySection = ({ report }) => (
-  <div className="bg-gray-50 p-4 rounded-lg mt-4">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <DetailRow
-        icon={FileText}
-        label="Report Category"
-        value={report.reportCategory.name}
-      />
-    </div>
-  </div>
+const CategorySection = () => (
+  <div className="bg-gray-50 p-4 rounded-lg mt-4 hidden"></div>
 );
 
 const ReportFooter = ({ report }) => (

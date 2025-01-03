@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteReportApi,
@@ -11,11 +11,11 @@ import { FiEdit } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
 import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
+import { fetchStationsApi } from "../../APIrequests/stationsApi";
 
 const FetchReport = () => {
   const navigate = useNavigate();
@@ -34,6 +34,7 @@ const FetchReport = () => {
     reportCategory: "",
     title: "",
     status: "",
+    station: "",
     startDate: "",
     endDate: "",
   });
@@ -69,10 +70,25 @@ const FetchReport = () => {
     queryFn: fetchRegionsApi,
   });
 
+  const { data: stationsData } = useQuery({
+    queryKey: ["fetchStations"],
+    queryFn: fetchStationsApi,
+  });
+
   const { data: reportCategoriesData } = useQuery({
     queryKey: ["fetchReportCategories"],
     queryFn: fetchReportCategoriesApi,
   });
+
+  // Get stations based on selected region
+  const filteredStations = useMemo(() => {
+    const stations = stationsData?.data?.stations || [];
+    if (!filters.region) {
+      return stations; // Return all stations if no region selected
+    }
+    // Filter stations by selected region
+    return stations.filter((station) => station.region?._id === filters.region);
+  }, [stationsData?.data?.stations, filters.region]);
 
   const reportMutation = useMutation({
     mutationKey: ["updateReport"],
@@ -217,6 +233,7 @@ const FetchReport = () => {
       reportCategory: "",
       title: "",
       status: "",
+      station: "",
       startDate: "",
       endDate: "",
     };
@@ -263,6 +280,19 @@ const FetchReport = () => {
             {regions?.map((region) => (
               <option key={region._id} value={region._id}>
                 {region.title}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.station} // Updated: Accessing station as a string
+            onChange={(e) => handleFilterChange("station", e.target.value)}
+            className="border p-2 rounded md:inline"
+          >
+            <option value="">All Stations</option>
+            {filteredStations?.map((station) => (
+              <option key={station._id} value={station._id}>
+                {station.name}
               </option>
             ))}
           </select>
@@ -336,6 +366,7 @@ const FetchReport = () => {
                 <th className="border p-1 w-[5%]">S/N</th>
                 <th className="border p-1 w-[25%]">Title</th>
                 <th className="border p-1 w-[15%]">Region</th>
+                <th className="border p-1 w-[10%]">Status</th>
                 <th className="border p-1 w-[15%]">Category</th>
                 <th className="border p-1 w-[10%]">Status</th>
                 <th className="border p-1 w-[20%]">Comment</th>
@@ -359,6 +390,10 @@ const FetchReport = () => {
                   </td>
                   <td className="border px-4 py-2">
                     {report.region?.title || "N/A"}
+                  </td>
+                  <td className="border px-4 py-2">
+                    {report.station?.name || "N/A"}{" "}
+                    {/* Updated: Accessing station name */}
                   </td>
                   <td className="border px-4 py-2">
                     {report.reportCategory?.title || "N/A"}

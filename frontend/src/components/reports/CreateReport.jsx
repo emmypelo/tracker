@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import  { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFormik } from "formik";
@@ -64,7 +64,7 @@ const CreateReport = () => {
       region: "",
       reportCategory: "",
       description: "",
-      station: [],
+      station: "",
       pump: "",
     },
     validationSchema: Yup.object({
@@ -72,9 +72,7 @@ const CreateReport = () => {
       region: Yup.string().required("Region is required"),
       reportCategory: Yup.string().required("Category is required"),
       description: Yup.string(),
-      station: Yup.array()
-        .min(1, "Station is required")
-        .max(1, "One station is required"),
+      station: Yup.string().required("Station is required"),
       pump: Yup.string().when("reportCategory", {
         is: (category) => {
           const pumpCategory = reportCategoriesData?.data?.categories?.find(
@@ -90,7 +88,6 @@ const CreateReport = () => {
       try {
         const formattedValues = {
           ...values,
-          station: values.station[0],
         };
 
         await reportMutation.mutateAsync(formattedValues);
@@ -130,7 +127,6 @@ const CreateReport = () => {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-
           formik.handleSubmit(e);
         }}
         className="relative w-full space-y-2 p-6"
@@ -180,7 +176,7 @@ const CreateReport = () => {
               onChange={(option) => {
                 formik.setFieldValue("region", option.value);
                 setSelectedRegion(option.value);
-                formik.setFieldValue("station", []);
+                formik.setFieldValue("station", "");
               }}
               className={`${
                 formik.touched.region && formik.errors.region
@@ -199,6 +195,7 @@ const CreateReport = () => {
               }}
             />
           </div>
+
           {/* Station Select */}
           <div className="relative">
             <label
@@ -210,21 +207,25 @@ const CreateReport = () => {
             {renderError("station")}
             <Select
               id="station"
-              isMulti={false}
               options={filteredStations.map((station) => ({
                 value: station._id,
                 label: station.name,
               }))}
               onChange={(option) =>
-                formik.setFieldValue("station", [option.value])
+                formik.setFieldValue("station", option.value)
               }
-              value={formik.values.station
-                .map((stationId) =>
-                  filteredStations.find((station) => station._id === stationId)
+              value={
+                filteredStations.find(
+                  (station) => station._id === formik.values.station
                 )
-                .map((station) =>
-                  station ? { value: station._id, label: station.name } : null
-                )}
+                  ? {
+                      value: formik.values.station,
+                      label: filteredStations.find(
+                        (station) => station._id === formik.values.station
+                      ).name,
+                    }
+                  : null
+              }
               isDisabled={!selectedRegion}
               className={`${
                 formik.touched.station && formik.errors.station
@@ -243,6 +244,7 @@ const CreateReport = () => {
               }}
             />
           </div>
+
           {/* Report Category Select */}
           <div className="relative">
             <label
@@ -285,6 +287,7 @@ const CreateReport = () => {
               }}
             />
           </div>
+
           {/* Pump Input (Conditional) */}
           {reportCategoriesData?.data?.categories?.find(
             (c) => c._id === selectedCategory
