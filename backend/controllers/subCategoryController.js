@@ -46,7 +46,7 @@ const subCategoryController = {
   // Fetch all subcategories
   fetchAllSubCategories: asyncHandler(async (req, res) => {
     try {
-      const subCategories = await SubCategory.find();
+      const subCategories = await SubCategory.find().populate("tasks");
       return sendResponse(
         res,
         200,
@@ -70,7 +70,9 @@ const subCategoryController = {
   fetchOneSubCategory: asyncHandler(async (req, res) => {
     try {
       const subCategoryId = req.params.subCategoryId;
-      const subCategory = await SubCategory.findById(subCategoryId);
+      const subCategory = await SubCategory.findById(subCategoryId).populate(
+        "tasks"
+      );
 
       if (!subCategory) {
         return sendResponse(res, 404, "error", "Subcategory not found");

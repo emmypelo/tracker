@@ -80,7 +80,7 @@ const AddCategory = () => {
   };
 
   return (
-    <section className="flex items-center justify-center w-3/5">
+    <section className="flex items-center justify-center w-3/5 mt-3 mx-auto">
       <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
         {mutation.isLoading && (
           <div className="absolute top-5 w-full text-center">
@@ -99,9 +99,9 @@ const AddCategory = () => {
         )}
 
         <h2 className="text-2xl font-bold text-white bg-slate-900 rounded-t-lg py-2">
-          Add {addType === "category" ? "Category" : "Subcategory"}
+          Task {addType === "category" ? "Category" : "Subcategory"}
         </h2>
-        <form className="mt-8 p-4 space-y-6" onSubmit={formik.handleSubmit}>
+        <form className="p-4 space-y-6" onSubmit={formik.handleSubmit}>
           <div className="flex justify-center space-x-4 mb-4">
             <button
               type="button"

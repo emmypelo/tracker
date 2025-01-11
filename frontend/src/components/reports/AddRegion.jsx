@@ -118,7 +118,7 @@ const AddRegion = () => {
               htmlFor="rss"
               className="text-left block mb-2 text-sm font-medium text-white"
             >
-              RSS Feed
+              RSS
             </label>
             {renderError("rss")}
             <input

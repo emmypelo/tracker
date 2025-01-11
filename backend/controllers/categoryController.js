@@ -46,7 +46,7 @@ const categoryController = {
   // Fetch all categories
   fetchAllCategories: asyncHandler(async (req, res) => {
     try {
-      const categories = await Category.find();
+      const categories = await Category.find().populate('tasks');
       return sendResponse(
         res,
         200,
@@ -70,7 +70,7 @@ const categoryController = {
   fetchOneCategory: asyncHandler(async (req, res) => {
     try {
       const categoryId = req.params.categoryId;
-      const category = await Category.findById(categoryId);
+      const category = await Category.findById(categoryId).populate('tasks');
 
       if (!category) {
         return sendResponse(res, 404, "error", "Category not found");

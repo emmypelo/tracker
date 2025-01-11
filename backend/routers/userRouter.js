@@ -10,4 +10,5 @@ userRouter.get("/checkauth", userController.checkAuthentication);
 userRouter.post("/logout", userController.logout);
 userRouter.post("/forgot-password", userController.forgotPassword);
 userRouter.post("/reset-password/:verifyToken", userController.resetPassword);
+// userRouter.patch('/edit', userController)
 export default userRouter;

@@ -8,6 +8,8 @@ import Navbar from "./components/common/Navbar";
 import "../src/index.css";
 import "../src/App.css";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import TaskCategoriesPage from "./pages/TaskCategoriesPage";
+import TaskCategoryDetailsPage from "./pages/TaskCategoryDetailsPage";
 
 // Lazy load all components
 const Home = lazy(() => import("./pages/Home"));
@@ -67,6 +69,11 @@ const App = () => {
                     />
                     <Route path="addstation" element={<AddStationPage />} />
                     <Route path="addregion" element={<AddRegionPage />} />
+                    <Route path="categories" element={<TaskCategoriesPage />} />
+                    <Route
+                      path="categories/:categoryId"
+                      element={<TaskCategoryDetailsPage />}
+                    />
                   </Route>
                 </Route>
               </Routes>

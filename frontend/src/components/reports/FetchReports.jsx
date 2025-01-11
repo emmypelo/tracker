@@ -28,7 +28,7 @@ const FetchReport = () => {
   const [modalMessage, setModalMessage] = useState("");
   const [editingRowId, setEditingRowId] = useState(null);
   const [isError, setIsError] = useState(false);
-
+  const [reportToDelete, setReportToDelete] = useState(null);
   const [filters, setFilters] = useState({
     region: "",
     reportCategory: "",
@@ -99,6 +99,47 @@ const FetchReport = () => {
     },
   });
 
+  // ... (keep all the existing functions)
+
+  const handleDelete = async (reportId) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
+    setReportToDelete(reportId);
+    setIsModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!reportToDelete) return;
+
+    try {
+      await deleteMutation.mutateAsync(reportToDelete);
+      setIsError(false);
+      setModalMessage("Report deleted successfully");
+    } catch (error) {
+      setIsError(true);
+      let errorMessage = "Deleting failed";
+
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        navigate("/signin", { state: { from: location } });
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+
+      setModalMessage(errorMessage);
+    } finally {
+      setIsModalOpen(false);
+      setReportToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsModalOpen(false);
+    setReportToDelete(null);
+  };
   const deleteMutation = useMutation({
     mutationKey: ["deleteReport"],
     mutationFn: deleteReportApi,
@@ -124,27 +165,6 @@ const FetchReport = () => {
       setIsModalOpen(true);
     },
   });
-
-  const handleDelete = async (reportId) => {
-    if (!isAuthenticated) {
-      navigate("/signin", { state: { from: location } });
-      return;
-    }
-    deleteMutation.mutateAsync(reportId).catch((error) => {
-      let errorMessage = "Deleting failed";
-
-      if (error.response?.status === 401 || error.message.includes("401")) {
-        navigate("/signin", { state: { from: location } });
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-
-      setModalMessage(errorMessage);
-      setIsModalOpen(true);
-    });
-  };
 
   const [editValues, setEditValues] = useState({
     status: "",
@@ -473,14 +493,12 @@ const FetchReport = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         title={isError ? "Error" : "Success"}
+        isDeleteAction={!!reportToDelete}
+        onDelete={confirmDelete}
+        onCancel={cancelDelete}
+        deleteConfirmationText="Are you sure you want to delete this report? This action cannot be undone."
       >
-        <p
-          className={`text-center ${
-            isError ? "text-red-600" : "text-green-600"
-          }`}
-        >
-          {modalMessage}
-        </p>
+        <p>{modalMessage}</p>
       </Modal>
     </div>
   );

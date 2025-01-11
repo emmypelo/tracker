@@ -14,8 +14,8 @@ const ManagementLayout = () => {
   }, [authenticated, navigate]);
 
   return (
-    <div className="flex h-full">
-      <nav className="w-64 bg-gray-100 p-4">
+    <div className="flex h-auto ">
+      <nav className="w-64 bg-gray-100 p-4 ">
         <ul className="space-y-2">
           <li>
             <NavLink
@@ -71,6 +71,20 @@ const ManagementLayout = () => {
               }
             >
               Add Region
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/manage/categories"
+              className={({ isActive }) =>
+                `block p-2 rounded ${
+                  isActive
+                    ? "bg-blue-500 text-white"
+                    : "text-gray-700 hover:bg-gray-200"
+                }`
+              }
+            >
+              Manage Categories
             </NavLink>
           </li>
         </ul>
