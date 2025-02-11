@@ -109,7 +109,7 @@ const TaskDetails = () => {
     });
   };
 
-  if (isLoading) return <LoadingState />;
+  // if (isLoading) return <LoadingState />;
   if (error) return <ErrorState error={error} />;
 
   const task = taskData?.data?.task;

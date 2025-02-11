@@ -28,9 +28,9 @@ const TaskCategories = () => {
   const categories = categoriesData?.data?.categories || [];
   const subCategories = subCategoriesData?.data?.subCategories || [];
 
-  if (isCategoriesLoading || isSubCategoriesLoading) {
-    return <div className="text-center text-gray-600 p-8">Loading...</div>;
-  }
+  // if (isCategoriesLoading || isSubCategoriesLoading) {
+  //   return <div className="text-center text-gray-600 p-8">Loading...</div>;
+  // }
 
   if (categoriesError || subCategoriesError) {
     return (
@@ -49,7 +49,9 @@ const TaskCategories = () => {
       {items.map((item) => (
         <li key={item.id || item._id}>
           <Link
-            to={`/${activeView}/${item._id}`}
+            to={`/manage/${
+              activeView === "categories" ? "categories" : "subcategories"
+            }/${item._id}`}
             className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors duration-150 ease-in-out"
           >
             <span className="text-lg text-gray-800">

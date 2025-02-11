@@ -7,10 +7,6 @@ import Navbar from "./components/common/Navbar";
 
 import "../src/index.css";
 import "../src/App.css";
-import ProtectedRoute from "./components/common/ProtectedRoute";
-import TaskCategoriesPage from "./pages/TaskCategoriesPage";
-import TaskCategoryDetailsPage from "./pages/TaskCategoryDetailsPage";
-
 // Lazy load all components
 const Home = lazy(() => import("./pages/Home"));
 const SignInPage = lazy(() => import("./pages/SignInPage"));
@@ -28,6 +24,14 @@ const FetchReportsPage = lazy(() => import("./pages/FetchReportsPage"));
 const ReportDetailsPage = lazy(() => import("./pages/ReportDetailsPage"));
 const ManagementLayout = lazy(() =>
   import("./components/common/ManagementLayout")
+);
+const ProtectedRoute = lazy(() => import("./components/common/ProtectedRoute"));
+const TaskCategoriesPage = lazy(() => import("./pages/TaskCategoriesPage"));
+const TaskCategoryDetailsPage = lazy(() =>
+  import("./pages/TaskCategoryDetailsPage")
+);
+const TaskSubcategoryDetailsPage = lazy(() =>
+  import("./pages/TaskSubcategoryDetailsPage")
 );
 
 const App = () => {
@@ -73,6 +77,11 @@ const App = () => {
                     <Route
                       path="categories/:categoryId"
                       element={<TaskCategoryDetailsPage />}
+                    />
+
+                    <Route
+                      path="subcategories/:subCategoryId"
+                      element={<TaskSubcategoryDetailsPage />}
                     />
                   </Route>
                 </Route>

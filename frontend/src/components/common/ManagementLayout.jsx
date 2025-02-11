@@ -19,6 +19,21 @@ const ManagementLayout = () => {
         <ul className="space-y-2">
           <li>
             <NavLink
+              to="/manage"
+              className={({ isActive }) =>
+                `block p-2 rounded ${
+                  isActive
+                    ? "bg-blue-500 text-white"
+                    : "text-gray-700 hover:bg-gray-200"
+                }`
+              }
+            >
+              Overview
+            </NavLink>
+          </li>
+
+          <li>
+            <NavLink
               to="/manage/addcategory"
               className={({ isActive }) =>
                 `block p-2 rounded ${
@@ -28,7 +43,7 @@ const ManagementLayout = () => {
                 }`
               }
             >
-              Add Category
+              Task Category
             </NavLink>
           </li>
           <li>

@@ -99,7 +99,6 @@ const FetchReport = () => {
     },
   });
 
-  // ... (keep all the existing functions)
 
   const handleDelete = async (reportId) => {
     if (!isAuthenticated) {
@@ -261,7 +260,7 @@ const FetchReport = () => {
     debouncedFetchReports(clearedFilters);
   };
 
-  if (isReportsLoading) return <h2>Loading reports...</h2>;
+  // if (isReportsLoading) return <h2>Loading reports...</h2>;
   if (isReportsError)
     return <h2>Error: {reportsError?.message || "Something went wrong"}</h2>;
 
@@ -305,7 +304,7 @@ const FetchReport = () => {
           </select>
 
           <select
-            value={filters.station} // Updated: Accessing station as a string
+            value={filters.station}
             onChange={(e) => handleFilterChange("station", e.target.value)}
             className="border p-2 rounded md:inline"
           >

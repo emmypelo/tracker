@@ -237,7 +237,7 @@ const FetchTask = () => {
     debouncedFetchTasks(clearedFilters);
   };
 
-  if (isTasksLoading) return <h2>Loading tasks...</h2>;
+
   if (isTasksError)
     return <h2>Error: {tasksError?.message || "Something went wrong"}</h2>;
 

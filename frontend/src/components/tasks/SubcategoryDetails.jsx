@@ -1,18 +1,18 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  fetchAcategory,
-  updateCategoryApi,
-} from "../../APIrequests/categoryAPI";
 import { updateTaskApi, deleteTaskApi } from "../../APIrequests/taskAPI";
+import {
+  fetchSubCategory,
+  updateSubCategoryApi,
+} from "../../APIrequests/subCategoryAPI";
 import { useParams, useNavigate } from "react-router-dom";
 import { FiEdit } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import Modal from "../common/Modal";
 
-const CategoryDetails = () => {
-  const { categoryId } = useParams();
+const SubcategoryDetails = () => {
+  const { subCategoryId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState({
@@ -29,17 +29,23 @@ const CategoryDetails = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [isError, setIsError] = useState(false);
+
+  // New state for subcategory editing
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
 
   const {
-    data: categoryData,
+    data: subcategoryData,
     isLoading,
-    isError: isCategoryError,
+    isError: isSubCategoryError,
   } = useQuery({
-    queryKey: ["fetch-Category", categoryId],
-    queryFn: () => fetchAcategory(categoryId),
+    queryKey: ["fetch-subcategory", subCategoryId],
+    queryFn: () => fetchSubCategory(subCategoryId),
+    onSuccess: (data) => {
+      setNewTitle(data.data.subCategory.title);
+      setNewDescription(data.data.subCategory.description);
+    },
   });
 
   const taskMutation = useMutation({
@@ -47,7 +53,7 @@ const CategoryDetails = () => {
     mutationFn: updateTaskApi,
     onSuccess: () => {
       setEditingRowId(null);
-      queryClient.invalidateQueries(["fetch-Category", categoryId]);
+      queryClient.invalidateQueries(["fetch-subcategory", subCategoryId]);
     },
   });
 
@@ -58,7 +64,7 @@ const CategoryDetails = () => {
       setIsError(false);
       setModalMessage("Task deleted successfully");
       setIsModalOpen(true);
-      queryClient.invalidateQueries(["fetch-Category", categoryId]);
+      queryClient.invalidateQueries(["fetch-subcategory", subCategoryId]);
     },
     onError: (error) => {
       setIsError(true);
@@ -73,19 +79,19 @@ const CategoryDetails = () => {
     },
   });
 
-  const updateCategoryMutation = useMutation({
-    mutationKey: ["updateCategory"],
-    mutationFn: updateCategoryApi,
+  const updateSubCategoryMutation = useMutation({
+    mutationKey: ["updateSubCategory"],
+    mutationFn: updateSubCategoryApi,
     onSuccess: () => {
       setIsEditing(false);
-      queryClient.invalidateQueries(["fetch-Category", categoryId]);
+      queryClient.invalidateQueries(["fetch-subcategory", subCategoryId]);
       setIsError(false);
-      setModalMessage("Category updated successfully");
+      setModalMessage("Subcategory updated successfully");
       setIsModalOpen(true);
     },
     onError: (error) => {
       setIsError(true);
-      let errorMessage = "Category update failed";
+      let errorMessage = "Subcategory update failed";
       if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       } else if (error.response?.data?.message) {
@@ -96,18 +102,18 @@ const CategoryDetails = () => {
     },
   });
 
-  const { category, description, tasks, createdAt, updatedAt } = useMemo(() => {
-    if (categoryData) {
-      return categoryData.data.category;
+  const { title, description, tasks, createdAt, updatedAt } = useMemo(() => {
+    if (subcategoryData) {
+      return subcategoryData.data.subCategory;
     }
     return {
-      category: "",
+      title: "",
       description: "",
       tasks: [],
       createdAt: "",
       updatedAt: "",
     };
-  }, [categoryData]);
+  }, [subcategoryData]);
 
   const filteredTasks = useMemo(() => {
     if (!tasks) return [];
@@ -184,32 +190,29 @@ const CategoryDetails = () => {
 
   const handleEditClick = useCallback(() => {
     setIsEditing(true);
-    setNewTitle(category);
+    setNewTitle(title);
     setNewDescription(description);
-  }, [category, description]);
+  }, [title, description]);
 
   const handleSaveClick = useCallback(() => {
-    updateCategoryMutation.mutate({
-      categoryId,
+    updateSubCategoryMutation.mutate({
+      subCategoryId,
       title: newTitle,
       description: newDescription,
     });
-  }, [categoryId, newTitle, newDescription, updateCategoryMutation]);
+  }, [subCategoryId, newTitle, newDescription, updateSubCategoryMutation]);
 
   const handleCancelClick = useCallback(() => {
     setIsEditing(false);
-    setNewTitle(category);
+    setNewTitle(title);
     setNewDescription(description);
-  }, [category, description]);
+  }, [title, description]);
 
-  if (isLoading) {
-    return <div className="text-center py-8">Loading...</div>;
-  }
 
-  if (isCategoryError) {
+  if (isSubCategoryError) {
     return (
       <div className="text-center py-8 text-red-600">
-        Error fetching category details
+        Error fetching subcategory details
       </div>
     );
   }
@@ -246,7 +249,7 @@ const CategoryDetails = () => {
         </div>
       ) : (
         <div className="mb-4">
-          <h1 className="text-3xl font-bold mb-4">{category}</h1>
+          <h1 className="text-3xl font-bold mb-2">{title}</h1>
           <p className="text-gray-700 mb-4">
             {description || "No description provided."}
           </p>
@@ -254,11 +257,10 @@ const CategoryDetails = () => {
             onClick={handleEditClick}
             className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
           >
-            Edit Category
+            Edit Subcategory
           </button>
         </div>
       )}
-
       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-6">
         <div>
           <strong>Created:</strong> {new Date(createdAt).toLocaleDateString()}
@@ -268,13 +270,6 @@ const CategoryDetails = () => {
           {new Date(updatedAt).toLocaleDateString()}
         </div>
       </div>
-      {/* Remove this block */}
-      {/* <Link
-        to={`/categories/${categoryId}/edit`}
-        className="mb-6 inline-block bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-      >
-        Edit Category
-      </Link> */}
 
       <h2 className="text-2xl font-bold mt-8 mb-4">Tasks</h2>
       <div className="mb-4 flex gap-4">
@@ -453,7 +448,7 @@ const CategoryDetails = () => {
           </table>
         </div>
       ) : (
-        <p className="text-gray-600">No tasks found for this category.</p>
+        <p className="text-gray-600">No tasks found for this subcategory.</p>
       )}
 
       <Modal
@@ -473,4 +468,4 @@ const CategoryDetails = () => {
   );
 };
 
-export default CategoryDetails;
+export default SubcategoryDetails;
