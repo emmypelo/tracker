@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +18,7 @@ import { useSelector } from "react-redux";
 import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
 import { fetchStationsApi } from "../../APIrequests/stationsAPI";
+import { Search, X } from "lucide-react";
 
 const FetchReport = () => {
   const navigate = useNavigate();
@@ -44,7 +47,7 @@ const FetchReport = () => {
     debounce((newFilters) => {
       queryClient.invalidateQueries(["fetchReports", newFilters]);
     }, 300),
-    [queryClient]
+    []
   );
 
   const handleFilterChange = (key, value) => {
@@ -98,7 +101,6 @@ const FetchReport = () => {
     },
   });
 
-
   const handleDelete = async (reportId) => {
     if (!isAuthenticated) {
       navigate("/signin", { state: { from: location } });
@@ -138,6 +140,7 @@ const FetchReport = () => {
     setIsModalOpen(false);
     setReportToDelete(null);
   };
+
   const deleteMutation = useMutation({
     mutationKey: ["deleteReport"],
     mutationFn: deleteReportApi,
@@ -259,7 +262,6 @@ const FetchReport = () => {
     debouncedFetchReports(clearedFilters);
   };
 
-  // if (isReportsLoading) return <h2>Loading reports...</h2>;
   if (isReportsError)
     return <h2>Error: {reportsError?.message || "Something went wrong"}</h2>;
 
@@ -271,106 +273,105 @@ const FetchReport = () => {
     <div className="relative px-1">
       <div className="sticky top-[4.6rem] left-0 right-0 bg-white shadow-md z-30">
         <div className="flex justify-between items-center w-full h-16 px-4 bg-gray-800 text-white">
-          <h1 className="text-2xl font-bold">Reports Dashboard</h1>
+          <h1 className="text-l font-bold">Reports Dashboard</h1>
           <Link
             to="/report"
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300 ease-in-out"
           >
             New Report
           </Link>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4 mb py-6 px-4 sticky top-[8.5rem] z-20 bg-gray-100 h-[9rem]">
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 ">
-          <input
-            type="text"
-            placeholder="Search by title"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="border px-1 rounded w-1/2 md:w-1/4 py-0"
-          />
-          <select
-            value={filters.region}
-            onChange={(e) => handleFilterChange("region", e.target.value)}
-            className="border p-2 rounded hidden md:inline appearance-none"
-          >
-            <option value="">All Regions</option>
-            {regions?.map((region) => (
-              <option key={region._id} value={region._id}>
-                {region.title}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={filters.station}
-            onChange={(e) => handleFilterChange("station", e.target.value)}
-            className="border p-2 rounded md:inline"
-          >
-            <option value="">All Stations</option>
-            {filteredStations?.map((station) => (
-              <option key={station._id} value={station._id}>
-                {station.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filters.reportCategory}
-            onChange={(e) =>
-              handleFilterChange("reportCategory", e.target.value)
-            }
-            className="border p-2 rounded hidden md:inline appearance-none"
-          >
-            <option value="">All Categories</option>
-            {reportCategories?.map((category) => (
-              <option key={category._id} value={category._id}>
-                {category.title}
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <label htmlFor="from">From:</label>
+      <div className="sticky top-[8.5rem] z-20 bg-gray-100 h-[4.5rem]">
+        <form onSubmit={handleSearchSubmit} className="h-full px-4 py-2">
+          <div className="flex items-center gap-2 h-full">
             <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange("startDate", e.target.value)}
-              className="border p-2 rounded"
-              name="from"
+              type="text"
+              placeholder="Search by title"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="border p-2 rounded min-w-[100px] w-full md:w-auto"
             />
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange("status", e.target.value)}
+              className="border p-2 rounded appearance-none w-28"
+            >
+              <option value="">Status</option>
+              <option value="Open">Open</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Closed">Closed</option>
+            </select>
+            <select
+              value={filters.region}
+              onChange={(e) => handleFilterChange("region", e.target.value)}
+              className="border p-2 rounded appearance-none w-36 hidden md:block"
+            >
+              <option value="">All Regions</option>
+              {regions?.map((region) => (
+                <option key={region._id} value={region._id}>
+                  {region.title}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filters.station}
+              onChange={(e) => handleFilterChange("station", e.target.value)}
+              className="border p-2 rounded appearance-none w-36 hidden md:block"
+            >
+              <option value="">All Stations</option>
+              {filteredStations?.map((station) => (
+                <option key={station._id} value={station._id}>
+                  {station.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filters.reportCategory}
+              onChange={(e) =>
+                handleFilterChange("reportCategory", e.target.value)
+              }
+              className="border p-2 rounded appearance-none w-36 hidden lg:block"
+            >
+              <option value="">All Categories</option>
+              {reportCategories?.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.title}
+                </option>
+              ))}
+            </select>
+            <div className="items-center gap-2 hidden lg:flex">
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  handleFilterChange("startDate", e.target.value)
+                }
+                className="border p-2 rounded w-32"
+                placeholder="From"
+              />
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                className="border p-2 rounded w-32"
+                placeholder="To"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 flex-shrink-0"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 flex-shrink-0"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="to">To:</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange("endDate", e.target.value)}
-              className="border p-2 rounded"
-              name="to"
-            />
-          </div>
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange("status", e.target.value)}
-            className="border p-2 rounded appearance-none"
-          >
-            <option value="">All Statuses</option>
-            <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Closed">Closed</option>
-          </select>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
-          >
-            Clear Filters
-          </button>
         </form>
       </div>
 
@@ -380,14 +381,22 @@ const FetchReport = () => {
         <div>
           <table className="w-full border-collapse border border-gray-300 bg-white">
             <thead>
-              <tr className="sticky top-[17rem] bg-gray-200 text-sm">
-                <th className="border p-1 w-[5%]">S/N</th>
+              <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
+                <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
                 <th className="border p-1 w-[25%]">Title</th>
-                <th className="border p-1 w-[15%]">Region</th>
+                <th className="border p-1 w-[15%] hidden md:table-cell">
+                  Region
+                </th>
+                <th className="border p-1 w-[10%] hidden md:table-cell">
+                  Station
+                </th>
+                <th className="border p-1 w-[15%] hidden md:table-cell">
+                  Category
+                </th>
                 <th className="border p-1 w-[10%]">Status</th>
-                <th className="border p-1 w-[15%]">Category</th>
-                <th className="border p-1 w-[10%]">Status</th>
-                <th className="border p-1 w-[20%]">Comment</th>
+                <th className="border p-1 w-[20%] hidden md:table-cell">
+                  Comment
+                </th>
                 <th className="border p-1 w-[10%]">Actions</th>
               </tr>
             </thead>
@@ -399,21 +408,22 @@ const FetchReport = () => {
                     editingRowId === report._id ? "bg-yellow-50" : ""
                   }`}
                 >
-                  <td className="border px-1 py-2">{index + 1}</td>
+                  <td className="border px-1 py-2 hidden md:table-cell">
+                    {index + 1}
+                  </td>
                   <td
                     className="border px-4 py-2 cursor-pointer text-blue-800 font-bold"
                     onClick={() => navigate(`/reports/${report?._id}`)}
                   >
                     {report.title}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {report.region?.title || "N/A"}
                   </td>
-                  <td className="border px-4 py-2">
-                    {report.station?.name || "N/A"}{" "}
-                    {/* Updated: Accessing station name */}
+                  <td className="border px-4 py-2 hidden md:table-cell">
+                    {report.station?.name || "N/A"}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {report.reportCategory?.title || "N/A"}
                   </td>
                   <td className="border px-4 py-2">
@@ -433,7 +443,7 @@ const FetchReport = () => {
                       report.status
                     )}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {editingRowId === report._id ? (
                       <input
                         type="text"
@@ -454,7 +464,7 @@ const FetchReport = () => {
                           onClick={saveChanges}
                           className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1"
                         >
-                          <IoCheckmarkDoneSharp className="w-3h-3" />
+                          <IoCheckmarkDoneSharp className="w-3 h-3" />
                         </button>
                         <button
                           onClick={cancelEditing}

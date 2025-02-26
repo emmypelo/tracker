@@ -69,7 +69,7 @@ const AddRegion = () => {
   };
 
   return (
-    <section className="flex items-center justify-center w-3/5 mx-auto mt-3">
+    <section className="flex items-center justify-center md:w-3/5 w-full mx-auto mt-3">
       <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
         {mutation.isLoading && (
           <div className="absolute top-5 w-full text-center">

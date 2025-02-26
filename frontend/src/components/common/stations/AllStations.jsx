@@ -7,7 +7,7 @@ import {
   deleteStationApi,
   fetchStationsApi,
   updateStationApi,
-} from "../../../APIrequests/stationsAPI";
+} from "../../../APIrequests/stationsAPI.js";
 import { fetchRegionsApi } from "../../../APIrequests/regionAPI";
 import { FiEdit } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
@@ -16,6 +16,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../common/Modal";
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
+import { Search, X } from "lucide-react";
 
 const AllStations = () => {
   const navigate = useNavigate();
@@ -245,28 +246,38 @@ const AllStations = () => {
     <div className="relative px-1">
       <div className="sticky top-[4.6rem] left-0 right-0 bg-white shadow-md z-30">
         <div className="flex justify-between items-center w-full h-16 px-4 bg-gray-800 text-white">
-          <h1 className="text-2xl font-bold">Stations Dashboard</h1>
+          <h1 className="text-l font-bold">Stations </h1>
           <Link
             to="/newstation"
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300 ease-in-out"
           >
             New Station
           </Link>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4 mb py-6 px-4 sticky top-[4rem] z-20 bg-gray-100 h-[5rem]">
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-3 ">
-          <input
-            type="text"
-            placeholder="Search by name"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="border p-2 rounded flex justify-between w-1/2 md:w-1/4"
-          />
+
+      {/* Responsive Single-row Filters */}
+      <div className="sticky top-[4.6rem] z-20 bg-gray-100 h-16 border-b border-gray-200">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex items-center gap-2 h-full px-4"
+        >
+          <div className="relative flex-1 max-w-md">
+            <input
+              type="text"
+              placeholder="Search by name"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+          </div>
+
+          {/* Region filter - hidden on mobile */}
           <select
             value={filters.region}
             onChange={(e) => handleFilterChange("region", e.target.value)}
-            className="border p-2 rounded "
+            className="hidden md:block h-10 border border-gray-300 rounded-md px-3 focus:ring-2 focus:ring-blue-400 focus:border-transparent"
           >
             <option value="">All Regions</option>
             {regions?.map((region) => (
@@ -275,35 +286,40 @@ const AllStations = () => {
               </option>
             ))}
           </select>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
-          >
-            Clear Filters
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="h-10 w-10 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="h-10 w-10 flex items-center justify-center bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </form>
       </div>
 
       {stations.length === 0 ? (
         <div>No stations found</div>
       ) : (
-        <div>
+        <div className="overflow-x-auto">
           <table className="w-full border-collapse border border-gray-300 bg-white">
             <thead>
-              <tr className="sticky top-[12.6rem] bg-gray-200 text-sm">
+              <tr className="sticky top-[rem] bg-gray-200 text-sm">
                 <th className="border p-1 w-[5%]">S/N</th>
-                <th className="border p-1 w-[25%]">Name</th>
-                <th className="border p-1 w-[19%]">Region</th>
-                <th className="border p-1 w-[26%]">Manager Name</th>
-                <th className="border p-1 w-[20%]">Manager Phone</th>
-                <th className="border p-1 w-[15%]">Actions</th>
+                <th className="border p-1">Name</th>
+                <th className="hidden md:table-cell border p-1">Region</th>
+                <th className="border p-1">Manager Name</th>
+                <th className="hidden md:table-cell border p-1">
+                  Manager Phone
+                </th>
+                <th className="border p-1">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -329,7 +345,7 @@ const AllStations = () => {
                       station.name
                     )}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="hidden md:table-cell border px-4 py-2">
                     {station.region?.title || "N/A"}
                   </td>
                   <td className="border px-4 py-2">
@@ -346,7 +362,7 @@ const AllStations = () => {
                       station.managerName
                     )}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="hidden md:table-cell border px-4 py-2">
                     {editingRowId === station._id ? (
                       <input
                         type="text"
@@ -362,7 +378,7 @@ const AllStations = () => {
                   </td>
                   <td className="border px-4 py-2">
                     {editingRowId === station._id ? (
-                      <div className="flex justify-between items-center h-8 ">
+                      <div className="flex justify-between items-center h-8">
                         <button
                           onClick={saveChanges}
                           className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1"

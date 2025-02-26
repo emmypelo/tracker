@@ -38,7 +38,12 @@ const TaskSubcategoryDetailsPage = lazy(() =>
 const App = () => {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_relativeSplatPath: true,
+          v7_startTransition:true, // Enable the future flag
+        }}
+      >
         <div className="flex flex-col min-h-screen bg-gray-50">
           <Navbar />
           <main className="flex-grow mt-16">

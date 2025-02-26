@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +18,7 @@ import { formatAmount } from "../hooks/hooks";
 import Modal from "../common/Modal";
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
+import { Search, X } from "lucide-react";
 
 const FetchTask = () => {
   const navigate = useNavigate();
@@ -45,7 +48,7 @@ const FetchTask = () => {
     debounce((newFilters) => {
       queryClient.invalidateQueries(["fetchTasks", newFilters]);
     }, 300),
-    [queryClient]
+    []
   );
 
   const handleFilterChange = (key, value) => {
@@ -236,7 +239,6 @@ const FetchTask = () => {
     debouncedFetchTasks(clearedFilters);
   };
 
-
   if (isTasksError)
     return <h2>Error: {tasksError?.message || "Something went wrong"}</h2>;
 
@@ -248,108 +250,113 @@ const FetchTask = () => {
     <div className="relative px-1">
       <div className="sticky top-[4.6rem] left-0 right-0 bg-white shadow-md z-30">
         <div className="flex justify-between items-center w-full h-16 px-4 bg-gray-800 text-white">
-          <h1 className="text-2xl font-bold">Tasks Dashboard</h1>
+          <h1 className="text-l font-bold">Tasks Dashboard</h1>
           <Link
             to="/newtask"
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out"
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300 ease-in-out"
           >
             New Task
           </Link>
         </div>
       </div>
-      <div className="flex flex-wrap gap-4 mb py-6 px-4 sticky top-[8.5rem] z-20 bg-gray-100 h-[9rem]">
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 ">
-          <input
-            type="text"
-            placeholder="Search by title"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="border p-2 rounded flex justify-between w-1/2 md:w-1/4"
-          />
-          <select
-            value={filters.category}
-            onChange={(e) => handleFilterChange("category", e.target.value)}
-            className="border p-2 rounded hidden md:inline appearance-none"
-          >
-            <option value="">All Categories</option>
-            {categories?.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.category}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filters.subCategory}
-            onChange={(e) => handleFilterChange("subCategory", e.target.value)}
-            className="border p-2 rounded hidden md:inline appearance-none"
-          >
-            <option value="">All SubCategories</option>
-            {subCategories?.map((sub) => (
-              <option key={sub._id} value={sub._id}>
-                {sub.title}
-              </option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <label htmlFor="from">From:</label>
+
+      <div className="sticky top-[8.5rem] z-20 bg-gray-100 h-[4.5rem]">
+        <form onSubmit={handleSearchSubmit} className="h-full px-4 py-2">
+          <div className="flex items-center gap-2 md::gap-1 h-full w-full justify-between">
             <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange("startDate", e.target.value)}
-              className="border p-2 rounded"
-              name="from"
+              type="text"
+              placeholder="Search by title"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="border p-2 rounded min-w-[100px] w-full md:w-auto"
             />
+            <select
+              value={filters.isCompleted}
+              onChange={(e) =>
+                handleFilterChange("isCompleted", e.target.value)
+              }
+              className="border p-2 rounded appearance-none w-28"
+            >
+              <option value="">Status</option>
+              <option value="true">Completed</option>
+              <option value="false">Pending</option>
+            </select>
+            <select
+              value={filters.category}
+              onChange={(e) => handleFilterChange("category", e.target.value)}
+              className="border p-2 rounded appearance-none w-36 hidden md:block"
+            >
+              <option value="">All Categories</option>
+              {categories?.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.category}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filters.isPaid}
+              onChange={(e) => handleFilterChange("isPaid", e.target.value)}
+              className="border p-2 rounded appearance-none w-28 hidden md:block"
+            >
+              <option value="">Payment</option>
+              <option value="true">Paid</option>
+              <option value="false">Pending</option>
+            </select>
+            <select
+              value={filters.subCategory}
+              onChange={(e) =>
+                handleFilterChange("subCategory", e.target.value)
+              }
+              className="border p-2 rounded appearance-none w-36 hidden lg:block"
+            >
+              <option value="">All SubCategories</option>
+              {subCategories?.map((sub) => (
+                <option key={sub._id} value={sub._id}>
+                  {sub.title}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filters.isApproved}
+              onChange={(e) => handleFilterChange("isApproved", e.target.value)}
+              className="border p-2 rounded appearance-none w-28 hidden lg:block"
+            >
+              <option value="">Approval</option>
+              <option value="true">Approved</option>
+              <option value="false">Pending</option>
+            </select>
+            <div className="items-center gap-2 hidden lg:flex">
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) =>
+                  handleFilterChange("startDate", e.target.value)
+                }
+                className="border p-2 rounded w-32"
+                placeholder="From"
+              />
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                className="border p-2 rounded w-32"
+                placeholder="To"
+              />
+            </div>
+            <button
+              type="submit"
+              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 flex-shrink-0"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600 flex-shrink-0"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <label htmlFor="to">To:</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange("endDate", e.target.value)}
-              className="border p-2 rounded"
-              name="to"
-            />
-          </div>
-          <select
-            value={filters.isApproved}
-            onChange={(e) => handleFilterChange("isApproved", e.target.value)}
-            className="border p-2 rounded appearance-none"
-          >
-            <option value="">Approval</option>
-            <option value="true">Approved</option>
-            <option value="false">Pending</option>
-          </select>
-          <select
-            value={filters.isPaid}
-            onChange={(e) => handleFilterChange("isPaid", e.target.value)}
-            className="border p-2 rounded appearance-none"
-          >
-            <option value="">Payment</option>
-            <option value="true">Paid</option>
-            <option value="false">Pending</option>
-          </select>
-          <select
-            value={filters.isCompleted}
-            onChange={(e) => handleFilterChange("isCompleted", e.target.value)}
-            className="border p-2 rounded appearance-none"
-          >
-            <option value="">Completion</option>
-            <option value="true">Completed</option>
-            <option value="false">Pending</option>
-          </select>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
-          >
-            Clear Filters
-          </button>
         </form>
       </div>
 
@@ -359,8 +366,8 @@ const FetchTask = () => {
         <div>
           <table className="w-full border-collapse border border-gray-300 bg-white">
             <thead>
-              <tr className="sticky top-[17rem] bg-gray-200 text-sm">
-                <th className="border p-1 w-[5%]">S/N</th>
+              <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
+                <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
                 <th className="border p-1 w-[30%]">Title</th>
                 <th className="border p-1 w-[10%]">Amount</th>
                 <th className="border p-1 w-[10%] hidden md:table-cell">
@@ -369,9 +376,13 @@ const FetchTask = () => {
                 <th className="border p-1 w-[10%] hidden md:table-cell">
                   SubCategory
                 </th>
-                <th className="border p-1 w-[6%]">Approved</th>
-                <th className="border p-1 w-[6%]">Paid</th>
-                <th className="border p-1 w-[6%]">Progress</th>
+                <th className="border p-1 w-[6%] hidden md:table-cell">
+                  Approved
+                </th>
+                <th className="border p-1 w-[6%] hidden md:table-cell">Paid</th>
+                <th className="border p-1 w-[6%] hidden md:table-cell">
+                  Progress
+                </th>
                 <th className="border p-1 w-[6%]">Completed</th>
                 <th className="border p-1 w-[12%]">Actions</th>
               </tr>
@@ -384,7 +395,9 @@ const FetchTask = () => {
                     editingRowId === task._id ? "bg-yellow-50" : ""
                   }`}
                 >
-                  <td className="border px-1 py-2">{index + 1}</td>
+                  <td className="border px-1 py-2 hidden md:table-cell">
+                    {index + 1}
+                  </td>
                   <td
                     className="border px-4 py-2 cursor-pointer text-blue-800 font-bold"
                     onClick={() => navigate(`/tasks/${task?._id}`)}
@@ -400,7 +413,7 @@ const FetchTask = () => {
                   <td className="border px-4 py-2 hidden md:table-cell">
                     {task.subCategory?.title || "Uncategorized"}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {editingRowId === task._id ? (
                       <div className="flex items-center justify-center">
                         <label className="flex items-center cursor-pointer">
@@ -440,7 +453,7 @@ const FetchTask = () => {
                       </span>
                     )}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {editingRowId === task._id ? (
                       <div className="flex items-center justify-center">
                         <label className="flex items-center cursor-pointer">
@@ -480,7 +493,7 @@ const FetchTask = () => {
                       </span>
                     )}
                   </td>
-                  <td className="border px-4 py-2">
+                  <td className="border px-4 py-2 hidden md:table-cell">
                     {editingRowId === task._id ? (
                       <input
                         type="number"
@@ -488,7 +501,7 @@ const FetchTask = () => {
                         onChange={(e) =>
                           handleEditChange(
                             "progress",
-                            parseFloat(e.target.value)
+                            Number.parseFloat(e.target.value)
                           )
                         }
                         className="w-full p-1 border rounded"

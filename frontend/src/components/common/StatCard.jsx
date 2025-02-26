@@ -1,19 +1,19 @@
 import { motion } from "framer-motion";
 
-// StatCard component
-const StatCard = ({ title, value, icon }) => (
-  <motion.div
-    className="bg-white p-1 rounded-lg flex flex-col justify-center items-center shadow-md max-w-40"
-    whileHover={{ scale: 1.05 }}
-    transition={{ type: "spring", stiffness: 300 }}
-  >
-    <div className="flex flex-col items-center justify-evenly h-20">
-      <p className="text-l font-bold text-blue-600">{value}</p>
-
-      <h2 className="text-lg font-semibold text-gray-700">{title}</h2>
-      {/* {icon} */}
-    </div>
-  </motion.div>
-);
+const StatCard = ({ title, value }) => {
+  return (
+    <motion.div
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col items-center justify-center h-28 md:h-16 p-3" 
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <p className="mt-2 text-xl font-bold text-indigo-600">{value}</p>
+      <h3 className="text-l font-semibold text-gray-700">{title}</h3>
+    </motion.div>
+  );
+};
 
 export default StatCard;

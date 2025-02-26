@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   PieChart,
@@ -38,35 +39,22 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const RegionCharts = () => {
-  const renderCustomizedLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-    
-  }) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
-    const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
+  const [showLegend, setShowLegend] = useState(false);
 
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? "start" : "end"}
-        dominantBaseline="central"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      setShowLegend(window.innerWidth >= 768); 
+    };
+
+    handleResize(); 
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   return (
     <motion.div
-      className="bg-gray-700 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border-r-gray-700  "
+      className="bg-gray-700 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border-r-gray-700 md:w-1/2 w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
@@ -82,7 +70,29 @@ const RegionCharts = () => {
               cx="50%"
               cy="50%"
               labelLine={false}
-              label={renderCustomizedLabel}
+              label={({
+                cx,
+                cy,
+                midAngle,
+                innerRadius,
+                outerRadius,
+                percent,
+              }) => {
+                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+                const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="white"
+                    textAnchor={x > cx ? "start" : "end"}
+                    dominantBaseline="central"
+                  >
+                    {`${(percent * 100).toFixed(0)}%`}
+                  </text>
+                );
+              }}
               outerRadius={120}
               fill="#8884d8"
               dataKey="value"
@@ -96,16 +106,18 @@ const RegionCharts = () => {
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
-              formatter={(value, entry, index) => (
-                <span
-                  style={{ color: "white" }}
-                >{`${regionsData[index].title}: ${regionsData[index].value}`}</span>
-              )}
-            />
+            {showLegend && (
+              <Legend
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                formatter={(value, entry, index) => (
+                  <span style={{ color: "white" }}>
+                    {`${regionsData[index].title}: ${regionsData[index].value}`}
+                  </span>
+                )}
+              />
+            )}
           </PieChart>
         </ResponsiveContainer>
       </div>

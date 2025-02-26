@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { motion } from "framer-motion";
+import { truncate } from "lodash";
 
 const data = [
   { station: "Station A", reports: 100 },
@@ -55,16 +56,16 @@ export default function StationChart() {
           A visual representation of reports per station
         </p>
       </div>
-      <div className="h-[450px] w-full">
+      <div className="h-[400px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
-            margin={{ top: 10, right: 30, left: 20, bottom: 60 }}
+            margin={{ top: 10, right: 0, left: 0, bottom: 60 }}
           >
             <CartesianGrid
               strokeDasharray="3 3"
               stroke="#e5e7eb"
-              vertical={false}
+              vertical={truncate}
             />
             <XAxis
               dataKey="station"
@@ -73,13 +74,12 @@ export default function StationChart() {
               axisLine={{ stroke: "#e5e7eb" }}
               angle={-90}
               textAnchor="end"
-              height={80}
+              height={40}
             />
             <YAxis
               tick={{ fill: "#374151" }}
               tickLine={false}
               axisLine={{ stroke: "#e5e7eb" }}
-              
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend verticalAlign="top" height={36} iconType="circle" />

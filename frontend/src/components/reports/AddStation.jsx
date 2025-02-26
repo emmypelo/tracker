@@ -6,7 +6,7 @@ import * as Yup from "yup";
 import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
 import { useSelector } from "react-redux";
-import { addStationApi } from "../../APIrequests/stationsApi";
+import { addStationApi } from "../../APIrequests/stationsAPI";
 
 const AddStation = () => {
   const navigate = useNavigate();
@@ -77,7 +77,7 @@ const AddStation = () => {
   };
 
   return (
-    <section className="flex items-center justify-center w-3/5 mx-auto mt-3">
+    <section className="flex items-center justify-center md:w-3/5 w-full mx-auto mt-3">
       <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
         {mutation.isError && (
           <div className="absolute top-5 w-full text-center">

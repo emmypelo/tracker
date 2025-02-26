@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   PieChart,
@@ -39,6 +40,19 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const ReportDistributionChart = () => {
+  const [showLegend, setShowLegend] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setShowLegend(window.innerWidth >= 768); 
+    };
+
+    handleResize(); 
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   const renderCustomizedLabel = ({
     cx,
     cy,
@@ -66,7 +80,7 @@ const ReportDistributionChart = () => {
 
   return (
     <motion.div
-      className="bg-gray-700 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border-r-gray-700  "
+      className="bg-gray-700 bg-opacity-50 backdrop-blur-md shadow-lg rounded-xl border-r-gray-700 md:w-1/2 w-full "
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
@@ -95,17 +109,19 @@ const ReportDistributionChart = () => {
                 />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />}  />
-            <Legend
-              layout="vertical"
-              align="right"
-              verticalAlign="middle"
-              formatter={(value, entry, index) => (
-                <span
-                  style={{ color: "white" }}
-                >{`${reportData[index].title}: ${reportData[index].value}`}</span>
-              )}
-            />
+            <Tooltip content={<CustomTooltip />} />
+            {showLegend && (
+              <Legend
+                layout="vertical"
+                align="right"
+                verticalAlign="middle"
+                formatter={(value, entry, index) => (
+                  <span style={{ color: "white" }}>
+                    {`${reportData[index].title}: ${reportData[index].value}`}
+                  </span>
+                )}
+              />
+            )}
           </PieChart>
         </ResponsiveContainer>
       </div>
