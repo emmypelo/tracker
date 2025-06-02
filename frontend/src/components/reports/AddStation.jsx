@@ -72,7 +72,7 @@ const AddStation = () => {
     setIsModalOpen(false);
     if (!isError) {
       formik.resetForm();
-      navigate("/");
+      navigate("/manage");
     }
   };
 

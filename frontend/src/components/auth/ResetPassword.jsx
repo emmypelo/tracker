@@ -60,7 +60,7 @@ const ResetPassword = () => {
       setModalMessage("Password has been reset successfully.");
       setIsError(false);
       setIsModalOpen(true);
-      // Redirect after a short delay to allow the user to see the success message
+     
       setTimeout(() => {
         navigate("/signin");
       }, 5000);

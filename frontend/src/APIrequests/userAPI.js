@@ -22,9 +22,25 @@ export const checkUserApi = async (email) => {
         withCredentials: true,
       }
     );
-    return data; // Return the entire data object
+    return data;
   } catch (error) {
-    throw error; // Rethrow the error to be handled in the Yup validation
+    throw error;
+  }
+};
+
+// Check Username
+export const checkUsernameApi = async (username) => {
+  try {
+    const { data } = await axios.post(
+      `${baseUrl}/checkusername`,
+      { username },
+      {
+        withCredentials: true,
+      }
+    );
+    return data;
+  } catch (error) {
+    throw error;
   }
 };
 
@@ -54,6 +70,50 @@ export const logoutApi = async () => {
       withCredentials: true,
     }
   );
+  return data;
+};
+
+export const fetchAllUsersApi = async () => {
+  const { data } = await axios.get(`${baseUrl}`, {
+    withCredentials: true,
+  });
+
+  return data;
+};
+
+// Fetch a single user
+export const fetchAUserApi = async (userId) => {
+  const { data } = await axios.get(`${baseUrl}/${userId}`, {
+    withCredentials: true,
+  });
+
+  return data;
+};
+
+// Delete a user
+export const deleteUserApi = async (userId) => {
+  const { data } = await axios.delete(`${baseUrl}/${userId}`, {
+    withCredentials: true,
+  });
+
+  return data;
+};
+
+// Edit user profile
+export const editUserProfileApi = async (userId, userData) => {
+  const { data } = await axios.put(`${baseUrl}/${userId}`, userData, {
+    withCredentials: true,
+  });
+
+  return data;
+};
+
+// Admin edit user
+export const adminEditUserApi = async (userId, userData) => {
+  const { data } = await axios.put(`${baseUrl}/admin/${userId}`, userData, {
+    withCredentials: true,
+  });
+
   return data;
 };
 

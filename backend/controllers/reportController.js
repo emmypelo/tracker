@@ -62,8 +62,10 @@ const reportController = {
 
       // Add the report to the station
       stationFound.reports.push(reportCreated._id);
+      // Add the report to the station
+      reportCategoryFound.reports.push(reportCreated._id);
       await stationFound.save();
-
+      await reportCategoryFound.save();
       return sendResponse(res, 201, "success", "Report created successfully", {
         report: reportCreated,
       });

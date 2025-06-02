@@ -57,6 +57,7 @@ const ForgotPassword = () => {
       setModalMessage(
         "Password reset link sent to your email, check your inbox or spam to reset your password"
       );
+
       setIsError(false);
       setIsModalOpen(true);
     },
@@ -80,6 +81,7 @@ const ForgotPassword = () => {
       try {
         await ForgotPasswordMutation.mutateAsync(values.email);
       } catch (error) {
+        console.error;
       } finally {
         setSubmitting(false);
       }

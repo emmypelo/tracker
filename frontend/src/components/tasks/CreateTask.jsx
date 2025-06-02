@@ -89,7 +89,7 @@ const CreateTask = () => {
     setIsModalOpen(false);
     if (!isError) {
       formik.resetForm();
-      navigate("/");
+      // navigate("/");
     }
   };
 

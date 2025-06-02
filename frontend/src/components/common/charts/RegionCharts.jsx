@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { fetchRegionsApi } from "../../../APIrequests/regionAPI";
 import {
   PieChart,
   Pie,
@@ -9,23 +11,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const regionsData = [
-  { title: "Region 1", value: 45 },
-  { title: "Region 2", value: 20 },
-  { title: "Region 3", value: 33 },
-  { title: "Region 4", value: 12 },
-  { title: "Region 5", value: 10 },
-  { title: "Region 6", value: 19 },
-];
-
-const COLORS = [
-  "#6366F1",
-  "#8B5CF6",
-  "#EC4899",
-  "#10B981",
-  "#F59E0B",
-  "#A69E0B",
-];
+const generateColors = (count) => {
+  return Array.from(
+    { length: count },
+    (_, index) => `hsl(${(index * 360) / count}, 70%, 50%)`
+  );
+};
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -43,14 +34,33 @@ const RegionCharts = () => {
 
   useEffect(() => {
     const handleResize = () => {
-      setShowLegend(window.innerWidth >= 768); 
+      setShowLegend(window.innerWidth >= 768);
     };
 
-    handleResize(); 
+    handleResize();
     window.addEventListener("resize", handleResize);
 
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const {
+    data: regionData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["fetchRegions"],
+    queryFn: fetchRegionsApi,
+    keepPreviousData: true,
+  });
+
+  const regions = regionData?.data.regions || [];
+
+  const transformedData = regions.map((region) => ({
+    title: region.title,
+    value: region.stations?.length || 0,
+  }));
+
+  const dynamicColors = generateColors(transformedData.length);
 
   return (
     <motion.div
@@ -63,63 +73,67 @@ const RegionCharts = () => {
         Stations Distribution
       </h2>
       <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={regionsData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              label={({
-                cx,
-                cy,
-                midAngle,
-                innerRadius,
-                outerRadius,
-                percent,
-              }) => {
-                const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
-                const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
-                return (
-                  <text
-                    x={x}
-                    y={y}
-                    fill="white"
-                    textAnchor={x > cx ? "start" : "end"}
-                    dominantBaseline="central"
-                  >
-                    {`${(percent * 100).toFixed(0)}%`}
-                  </text>
-                );
-              }}
-              outerRadius={120}
-              fill="#8884d8"
-              dataKey="value"
-              nameKey="title"
-            >
-              {regionsData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
+        {isLoading ? (
+          <p className="text-center text-white">Loading...</p>
+        ) : error ? (
+          <p className="text-center text-red-500">Error fetching data</p>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={transformedData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({
+                  cx,
+                  cy,
+                  midAngle,
+                  innerRadius,
+                  outerRadius,
+                  percent,
+                }) => {
+                  const radius =
+                    innerRadius + (outerRadius - innerRadius) * 0.5;
+                  const x = cx + radius * Math.cos((-midAngle * Math.PI) / 180);
+                  const y = cy + radius * Math.sin((-midAngle * Math.PI) / 180);
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="white"
+                      textAnchor={x > cx ? "start" : "end"}
+                      dominantBaseline="central"
+                    >
+                      {`${(percent * 100).toFixed(0)}%`}
+                    </text>
+                  );
+                }}
+                outerRadius={120}
+                fill="#8884d8"
+                dataKey="value"
+                nameKey="title"
+              >
+                {transformedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={dynamicColors[index]} />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+              {showLegend && (
+                <Legend
+                  layout="vertical"
+                  align="right"
+                  verticalAlign="middle"
+                  formatter={(value, entry, index) => (
+                    <span style={{ color: "white" }}>
+                      {`${transformedData[index].title}: ${transformedData[index].value}`}
+                    </span>
+                  )}
                 />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            {showLegend && (
-              <Legend
-                layout="vertical"
-                align="right"
-                verticalAlign="middle"
-                formatter={(value, entry, index) => (
-                  <span style={{ color: "white" }}>
-                    {`${regionsData[index].title}: ${regionsData[index].value}`}
-                  </span>
-                )}
-              />
-            )}
-          </PieChart>
-        </ResponsiveContainer>
+              )}
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </motion.div>
   );

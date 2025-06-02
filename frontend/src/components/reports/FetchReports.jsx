@@ -226,7 +226,7 @@ const FetchReport = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     if (!isError) {
-      navigate("/");
+      navigate("/reports");
     }
   };
 

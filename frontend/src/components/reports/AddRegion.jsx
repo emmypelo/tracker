@@ -64,9 +64,9 @@ const AddRegion = () => {
     setIsModalOpen(false);
     if (!isError) {
       formik.resetForm();
-      navigate("/");
+      navigate("/manage");
     }
-  };
+  }
 
   return (
     <section className="flex items-center justify-center md:w-3/5 w-full mx-auto mt-3">

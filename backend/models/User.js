@@ -33,13 +33,10 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
     },
-    // passmatch: {
-    //   type: String,
-    //   required: [true, "Password is required"],
-    // },
+
     role: {
       type: String,
-      enum: ["user", "admin", "head"],
+      enum: ["user", "admin"],
       default: "user",
     },
     authMethod: {
@@ -73,8 +70,6 @@ userSchema.methods.generatePasswordResetToken = function () {
 const User = model("User", userSchema);
 
 export default User;
-
-
 
 // import mongoose from "mongoose";
 // import crypto from "crypto";

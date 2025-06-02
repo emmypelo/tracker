@@ -8,7 +8,7 @@ import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import { fetchReportCategoriesApi } from "../../APIrequests/reportCategoryAPI";
 import { createReportApi } from "../../APIrequests/reportAPI";
 import Modal from "../common/Modal";
-import { fetchStationsApi } from "../../APIrequests/stationsApi";
+import { fetchStationsApi } from "../../APIrequests/stationsAPI";
 
 const CreateReport = () => {
   const navigate = useNavigate();

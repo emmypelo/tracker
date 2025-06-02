@@ -7,6 +7,7 @@ import Navbar from "./components/common/Navbar";
 
 import "../src/index.css";
 import "../src/App.css";
+import Allusers from "./components/common/users/Allusers";
 // Lazy load all components
 const Home = lazy(() => import("./pages/Home"));
 const SignInPage = lazy(() => import("./pages/SignInPage"));
@@ -41,7 +42,7 @@ const App = () => {
       <BrowserRouter
         future={{
           v7_relativeSplatPath: true,
-          v7_startTransition:true, // Enable the future flag
+          v7_startTransition: true, // Enable the future flag
         }}
       >
         <div className="flex flex-col min-h-screen bg-gray-50">
@@ -81,6 +82,8 @@ const App = () => {
                     <Route path="stations" element={<AllStationsPage />} />
                     <Route path="addregion" element={<AddRegionPage />} />
                     <Route path="categories" element={<TaskCategoriesPage />} />
+                    <Route path="users" element={<Allusers />} />
+
                     <Route
                       path="categories/:categoryId"
                       element={<TaskCategoryDetailsPage />}

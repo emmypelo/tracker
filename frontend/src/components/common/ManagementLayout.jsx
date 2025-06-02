@@ -73,7 +73,7 @@ const Sidebar = ({ children, expanded, setExpanded }) => {
   return (
     <aside className="h-screen fixed left-0 top-[4.0rem] z-40">
       <nav className="h-full flex flex-col bg-white border-r shadow-sm ">
-        <div className="p-4 pb-2 flex justify-between items-center">
+        <div className="p-2 pb-2 flex justify-around items-center">
           <h1
             className={`overflow-hidden transition-all`}
             style={{ width: expanded ? "5rem" : "0" }}
@@ -88,10 +88,9 @@ const Sidebar = ({ children, expanded, setExpanded }) => {
           </button>
         </div>
 
-        <ul className="flex-1 px-3 text-left ">
+        <ul className="flex-1 px-3 text-left h-40 ">
           {React.Children.map(children, (child) =>
             React.cloneElement(child, {
-              
               onClick: () => setExpanded(false),
             })
           )}
@@ -133,7 +132,7 @@ const ManagementLayout = () => {
   const regions = regionsData?.data.regions || [];
   const reports = reportsData?.data.reports || [];
   const isOverview = location.pathname === "/manage";
-
+  console.log(regions);
   const navItems = [
     { to: "/manage", text: "Overview", icon: <Home size={20} />, end: true },
     {
@@ -160,6 +159,11 @@ const ManagementLayout = () => {
     {
       to: "/manage/stations",
       text: "All Stations",
+      icon: <Building size={20} />,
+    },
+    {
+      to: "/manage/users",
+      text: "All Users",
       icon: <Building size={20} />,
     },
   ];

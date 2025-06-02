@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { checkAuthApi, logoutApi } from "../../APIrequests/userAPI";
 import { login, logout } from "../../redux/slices/authSlices";
@@ -16,13 +16,22 @@ import {
   Settings,
   ChevronRight,
 } from "lucide-react";
-import logo from '../../images/logo.png'
-
+import logo from "../../images/logo.png";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const dispatch = useDispatch();
   const { userAuth } = useSelector((state) => state.auth);
+  const queryClient = useQueryClient();
+
+  // Track if this is the first render after page load
+  const isFirstRender = useRef(true);
+
+  // Track if we've explicitly logged out
+  const hasLoggedOut = useRef(false);
+
+  // Store initial auth state from Redux
+  const initialAuthState = useRef(userAuth?.data ? true : false);
 
   // Close mobile menu on window resize
   useEffect(() => {
@@ -35,32 +44,131 @@ export default function Navbar() {
     return () => window.removeEventListener("resize", handleResize);
   }, [isOpen]);
 
+  // Mark first render as complete after component mounts
+  useEffect(() => {
+    if (isFirstRender.current) {
+      console.log(
+        "First render, initial auth state:",
+        initialAuthState.current ? "logged in" : "logged out"
+      );
+      isFirstRender.current = false;
+    }
+
+    // Check for auth in localStorage as a backup
+    try {
+      const storedAuth = localStorage.getItem("userAuth");
+      if (storedAuth && !userAuth?.data) {
+        const parsedAuth = JSON.parse(storedAuth);
+        if (parsedAuth?.data) {
+          console.log("Restoring auth from localStorage");
+          dispatch(login(parsedAuth));
+        }
+      }
+    } catch (error) {
+      console.error("Error checking localStorage:", error);
+    }
+  }, [dispatch, userAuth]);
+
+  // Store auth in localStorage when it changes
+  useEffect(() => {
+    if (userAuth?.data) {
+      try {
+        localStorage.setItem("userAuth", JSON.stringify(userAuth));
+      } catch (error) {
+        console.error("Error storing auth in localStorage:", error);
+      }
+    }
+  }, [userAuth]);
+
   const logoutMutation = useMutation({
     mutationKey: ["logout"],
     mutationFn: logoutApi,
     retry: false,
+    onSuccess: () => {
+      hasLoggedOut.current = true;
+      dispatch(logout());
+      setIsOpen(false);
+      // Clear query cache on logout
+      queryClient.clear();
+      // Clear localStorage
+      localStorage.removeItem("userAuth");
+    },
   });
 
-  const { data: authData, isLoading: isCheckingAuth } = useQuery({
+  // Disable the auth check if we already have auth and this is the first render
+  const shouldSkipAuthCheck = isFirstRender.current && initialAuthState.current;
+
+  const {
+    data: authData,
+    isLoading: isCheckingAuth,
+    error: authError,
+    isSuccess: isAuthSuccess,
+    isError: isAuthError,
+  } = useQuery({
     queryKey: ["checkauth"],
     queryFn: checkAuthApi,
-    retry: false,
-    staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false, // Disable auto-refetch on window focus
+    refetchOnMount: !shouldSkipAuthCheck, // Skip initial check if we already have auth
+    refetchInterval: 1000 * 60 * 10, // Refresh every 10 minutes
+    enabled: !shouldSkipAuthCheck, // Disable the query if we should skip it
+    onError: (error) => {
+      console.error("Auth check error:", error);
+      // Only logout if we've explicitly logged out or if it's a 401 and not the first render
+      if (
+        hasLoggedOut.current ||
+        (error?.response?.status === 401 && !isFirstRender.current)
+      ) {
+        dispatch(logout());
+        localStorage.removeItem("userAuth");
+      }
+    },
+    onSuccess: (data) => {
+      if (data?.data) {
+        dispatch(login(data));
+        // Store in localStorage as backup
+        try {
+          localStorage.setItem("userAuth", JSON.stringify(data));
+        } catch (error) {
+          console.error("Error storing auth in localStorage:", error);
+        }
+      }
+    },
   });
 
+  // Handle auth state changes
   useEffect(() => {
-    if (!isCheckingAuth && authData) {
-      dispatch(login(authData));
-    } else if (!isCheckingAuth && !authData) {
-      dispatch(logout());
+    // Skip auth state updates on first render if we already have auth
+    if (isFirstRender.current && initialAuthState.current) {
+      return;
     }
-  }, [authData, isCheckingAuth, dispatch]);
 
-  const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    dispatch(logout());
-    setIsOpen(false);
+    if (!isCheckingAuth) {
+      if (isAuthSuccess && authData?.data) {
+        dispatch(login(authData));
+      } else if (
+        isAuthError &&
+        authError?.response?.status === 401 &&
+        !isFirstRender.current
+      ) {
+        // Only logout on explicit 401 unauthorized and not on first render
+        dispatch(logout());
+        localStorage.removeItem("userAuth");
+      }
+    }
+  }, [
+    authData,
+    isCheckingAuth,
+    authError,
+    isAuthSuccess,
+    isAuthError,
+    dispatch,
+  ]);
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   const name = userAuth?.data
@@ -99,6 +207,10 @@ export default function Navbar() {
     { path: "/manage", label: "Manage", icon: Settings },
   ];
 
+  // Always show UI if we have auth data, otherwise wait for check to complete
+  const showAuthUI = userAuth?.data || !isCheckingAuth;
+  const isAuthenticated = Boolean(userAuth?.data);
+
   return (
     <nav className="fixed top-0 z-40 flex h-16 w-full items-center justify-between bg-gradient-to-r from-gray-900 to-gray-800 px-4 shadow-lg backdrop-blur-sm">
       <motion.div
@@ -106,14 +218,17 @@ export default function Navbar() {
         animate={{ opacity: 1, x: 0 }}
         className="flex h-full w-[12%] items-center"
       >
-        <img
-          src={logo}
-          alt="logo"
-          className="max-h-full max-w-full object-contain filter drop-shadow-lg"
-        />
+        <Link to="/" className="w-full h-full">
+          {" "}
+          <img
+            src={logo || "/placeholder.svg"}
+            alt="logo"
+            className="max-h-full max-w-full object-contain filter drop-shadow-lg"
+          />
+        </Link>
       </motion.div>
 
-      {!isCheckingAuth && (
+      {showAuthUI && (
         <>
           {/* Desktop Navigation */}
           <div className="hidden md:flex w-[40%] lg:w-[20%] justify-center">
@@ -145,7 +260,7 @@ export default function Navbar() {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center"
             >
-              {userAuth?.data ? (
+              {isAuthenticated ? (
                 <div className="flex items-center gap-4">
                   <motion.div
                     whileHover={{ scale: 1.05 }}
@@ -160,13 +275,14 @@ export default function Navbar() {
                     className="group flex items-center gap-2 rounded-full bg-gray-700/50 px-4 py-2 transition-all duration-300 hover:bg-gray-700"
                     onClick={handleLogout}
                     aria-label="Logout"
+                    disabled={logoutMutation.isPending}
                   >
                     <LogOut
                       size={18}
                       className="text-white transition-colors group-hover:text-yellow-400"
                     />
                     <span className="text-sm font-medium text-white transition-colors group-hover:text-yellow-400">
-                      Logout
+                      {logoutMutation.isPending ? "Logging out..." : "Logout"}
                     </span>
                   </motion.button>
                 </div>
@@ -200,7 +316,6 @@ export default function Navbar() {
                 className="flex items-center gap-2"
               >
                 <Menu size={24} />
-                
               </motion.div>
             </motion.button>
           </div>

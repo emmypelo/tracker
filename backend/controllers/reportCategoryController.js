@@ -48,7 +48,7 @@ const reportCategoryController = {
   // Fetch all categories
   fetchAllCategories: asyncHandler(async (req, res) => {
     try {
-      const categories = await ReportCategory.find();
+      const categories = await ReportCategory.find().populate("reports");
       return sendResponse(
         res,
         200,
