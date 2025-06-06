@@ -8,13 +8,9 @@ import {
   ChevronLast,
   ChevronFirst,
   Home,
-  FileText,
-  MapPin,
+
   Globe,
-  Folder,
-  Building,
-  User2Icon,
-  PersonStandingIcon,
+
   UserCog,
   BookUser,
   HousePlug,

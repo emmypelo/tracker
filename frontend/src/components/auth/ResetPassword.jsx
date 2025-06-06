@@ -89,6 +89,7 @@ const ResetPassword = () => {
       try {
         await resetPasswordMutation.mutateAsync(data);
       } catch (error) {
+        console.log(error);
       } finally {
         setSubmitting(false);
       }

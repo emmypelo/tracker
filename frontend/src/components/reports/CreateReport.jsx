@@ -114,7 +114,7 @@ const CreateReport = () => {
         formik.setFieldValue("station", "");
       }
     }
-  }, [selectedRegion, stationsData]); // Removed formik from dependencies
+  }, [selectedRegion, stationsData]); 
 
   const closeModal = useCallback(() => {
     setModalState((prev) => ({ ...prev, isOpen: false }));
