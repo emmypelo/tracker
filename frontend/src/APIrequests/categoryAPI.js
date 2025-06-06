@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseUrl = "http://localhost:3000/api/category";
+const baseUrl = "https://tracker-8g9y.onrender.com/api/category";
 // ? Category
 export const addCategoryApi = async (categoryData) => {
   const { data } = await axios.post(`${baseUrl}/create`, categoryData, {

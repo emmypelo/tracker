@@ -2,7 +2,7 @@
 import axios from "axios";
 
 // name, username, email, password, passMatch
-const baseUrl = "http://localhost:3000/api/users";
+const baseUrl = "https://tracker-8g9y.onrender.com/api/users";
 // ? create User API
 export const registerUserApi = async (userData) => {
   const { data } = await axios.post(`${baseUrl}/register`, userData, {

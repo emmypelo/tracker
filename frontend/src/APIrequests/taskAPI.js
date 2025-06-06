@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseUrl = "http://localhost:3000/api/tasks";
+const baseUrl = "https://tracker-8g9y.onrender.com/api/tasks";
 // ? create Task API
 export const createTaskApi = async (postData) => {
   const { data } = await axios.post(`${baseUrl}/create`, postData, {

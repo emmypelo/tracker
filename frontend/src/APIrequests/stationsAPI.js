@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseUrl = "http://localhost:3000/api/stations";
+const baseUrl = "https://tracker-8g9y.onrender.com/api/stations";
 // ? Station
 export const addStationApi = async (stationData) => {
   const { data } = await axios.post(`${baseUrl}/create`, stationData, {

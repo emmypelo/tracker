@@ -6,10 +6,10 @@ const sendPasswordMail = async (to, token) => {
 
     // 1. Create transporter with better configuration
     const transporter = createTransport({
-      service: "gmail", // Use service instead of manual config
+      service: "gmail", 
       auth: {
         user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS, // This should be your App Password
+        pass: process.env.GMAIL_PASS, 
       },
     });
 
