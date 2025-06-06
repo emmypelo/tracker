@@ -25,9 +25,7 @@ app.use(express.json());
 // Enhanced CORS configuration
 const corsOptions = {
   origin:
-    process.env.NODE_ENV === "production"
-      ? ["https://tracker-rust-zeta.vercel.app"]
-      : ["http://localhost:3000", "http://127.0.0.1:3000"],
+    ["https://tracker-rust-zeta.vercel.app"],
   credentials: true, // This is crucial for cookies
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
