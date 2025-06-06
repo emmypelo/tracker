@@ -38,7 +38,8 @@ const sendPasswordMail = async (to, token) => {
                 <p style="margin-bottom: 15px;">You are receiving this email because a password reset was requested for your account.</p>
                 <p style="margin-bottom: 25px;">If you did not request this, please ignore this email and your password will remain unchanged.</p>
                 <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
+                  process.env.FRONTEND_URL ||
+                  "https://tracker-rust-zeta.vercel.app"
                 }/reset-password/${token}" 
                    style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">
                    Reset Your Password
@@ -46,7 +47,8 @@ const sendPasswordMail = async (to, token) => {
                 <p style="margin-top: 25px; font-size: 0.9em; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
                 <p style="font-size: 0.9em; color: #666; word-break: break-all;">
                   ${
-                    process.env.FRONTEND_URL || "http://localhost:5173"
+                    process.env.FRONTEND_URL ||
+                    "https://tracker-rust-zeta.vercel.app"
                   }/reset-password/${token}
                 </p>
                 <p style="margin-top: 30px; font-size: 0.8em; color: #999;">This is an automated message, please do not reply.</p>
