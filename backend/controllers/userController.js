@@ -150,14 +150,17 @@ const userController = {
         const token = jwt.sign(
           { id: user._id.toString(), role: user.role || "user" },
           process.env.JWT_SECRET,
-          { expiresIn: "1d" }
+          {
+            expiresIn: "1d",
+          }
         );
 
-        // Set token in cookie
+        // Set token in cookie with improved settings
         res.cookie("TrackIt", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          secure: process.env.NODE_ENV === "production", // Keep this
+          sameSite: "lax", // Changed from 'strict' to 'lax'
+          // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
@@ -186,12 +189,12 @@ const userController = {
   fetchAllUsers: asyncHandler(async (req, res) => {
     try {
       // Add pagination
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const page = Number.parseInt(req.query.page) || 1;
+      const limit = Number.parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
 
       const { name, email, role } = req.query;
-      let filter = {};
+      const filter = {};
 
       // Enhanced filtering options
       if (name) {
@@ -327,47 +330,68 @@ const userController = {
     res.cookie("TrackIt", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax", // Changed from 'strict' to 'lax'
+      // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
       maxAge: 1,
     }); // Expire cookie immediately
     return sendResponse(res, 200, "success", "Logged out successfully");
   }),
 
   // Forgot password (sending email token)
-  forgotPassword:asyncHandler(async (req, res) => {
-    const { email } = req.body
-  
+  forgotPassword: asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
     if (!email) {
-      return sendResponse(res, 400, "error", "Email is required")
+      return sendResponse(res, 400, "error", "Email is required");
     }
-  
+
     try {
       // Find the user
-      const user = await User.findOne({ email })
+      const user = await User.findOne({ email });
       if (!user) {
         // For security reasons, don't reveal if user exists or not
-        return sendResponse(res, 200, "success", `If a user with that email exists, a password reset link has been sent`)
+        return sendResponse(
+          res,
+          200,
+          "success",
+          `If a user with that email exists, a password reset link has been sent`
+        );
       }
-  
+
       // Use the method from the model
-      const token = await user.generatePasswordResetToken()
-  
+      const token = await user.generatePasswordResetToken();
+
       // Save the user
-      await user.save()
-  
+      await user.save();
+
       // Send the email
-      await sendPasswordMail(user.email, token)
-  
-      return sendResponse(res, 200, "success", `If a user with that email exists, a password reset link has been sent`)
+      await sendPasswordMail(user.email, token);
+
+      return sendResponse(
+        res,
+        200,
+        "success",
+        `If a user with that email exists, a password reset link has been sent`
+      );
     } catch (error) {
-      console.error("Forgot password error:", error)
-  
+      console.error("Forgot password error:", error);
+
       // More specific error handling
       if (error.message.includes("Gmail authentication")) {
-        return sendResponse(res, 500, "error", "Email service configuration error. Please contact support.")
+        return sendResponse(
+          res,
+          500,
+          "error",
+          "Email service configuration error. Please contact support."
+        );
       }
-  
-      return sendResponse(res, 500, "error", "An error occurred while processing your request. Please try again later.")
+
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request. Please try again later."
+      );
     }
   }),
 
@@ -484,7 +508,8 @@ const userController = {
         res.cookie("TrackIt", "", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "strict",
+          sameSite: "lax", // Changed from 'strict' to 'lax'
+          // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
           maxAge: 1,
         });
       }
