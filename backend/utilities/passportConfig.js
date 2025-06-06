@@ -1,6 +1,6 @@
 import passport from "passport";
 import { Strategy as JWTStrategy } from "passport-jwt";
-import User from "../models/User";
+import User from "../models/User.js";
 
 const options = {
   jwtFromRequest: (req) => req.cookies.token,
