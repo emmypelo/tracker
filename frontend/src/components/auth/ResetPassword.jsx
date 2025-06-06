@@ -60,7 +60,7 @@ const ResetPassword = () => {
       setModalMessage("Password has been reset successfully.");
       setIsError(false);
       setIsModalOpen(true);
-     
+
       setTimeout(() => {
         navigate("/signin");
       }, 5000);
@@ -75,6 +75,7 @@ const ResetPassword = () => {
   const formik = useFormik({
     initialValues: {
       password: "",
+      confirmPassword: "",
     },
     validationSchema: Yup.object({
       password: Yup.string().required("Password is required"),
@@ -82,6 +83,7 @@ const ResetPassword = () => {
     onSubmit: async (values, { setSubmitting }) => {
       const data = {
         password: values.password,
+        confirmPassword: values.confirmPassword,
         verifyToken,
       };
       try {
@@ -122,6 +124,18 @@ const ResetPassword = () => {
             onBlur={formik.handleBlur}
             error={formik.errors.password} // Corrected to use password error
             touched={formik.touched.password} // Corrected to use password touched
+          />
+          <InputField
+            label="Confirm Password"
+            type="password"
+            name="confirmPassword"
+            id="confirmPassword"
+            placeholder="Confirm new password"
+            value={formik.values.confirmPassword}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.errors.confirmPassword}
+            touched={formik.touched.confirmPassword}
           />
 
           <div className="flex items-start">

@@ -13,13 +13,13 @@ import UserProfilePage from "./pages/UserProfilePage";
 const Home = lazy(() => import("./pages/Home"));
 const SignInPage = lazy(() => import("./pages/SignInPage"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage"));
-const CategoryPage = lazy(() => import("./pages/CategoryPage"));
+
 const CreateTaskPage = lazy(() => import("./pages/CreateTaskPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const TaskDetailsPage = lazy(() => import("./pages/TaskDetailsPage"));
 const AddRegionPage = lazy(() => import("./pages/AddRegionPage"));
-const AddStationPage = lazy(() => import("./pages/AddStationPage"));
+
 const AllStationsPage = lazy(() => import("./pages/AllStationsPage"));
 const CreateReportPage = lazy(() => import("./pages/CreateReportPage"));
 const ReportCategoryPage = lazy(() => import("./pages/ReportCategoryPage"));
@@ -74,12 +74,11 @@ const App = () => {
                 {/* Protected management routes */}
                 <Route element={<ProtectedRoute />}>
                   <Route path="/manage" element={<ManagementLayout />}>
-                    <Route path="addcategory" element={<CategoryPage />} />
                     <Route
                       path="reportcategory"
                       element={<ReportCategoryPage />}
                     />
-                    <Route path="addstation" element={<AddStationPage />} />
+
                     <Route path="stations" element={<AllStationsPage />} />
                     <Route path="addregion" element={<AddRegionPage />} />
                     <Route path="categories" element={<TaskCategoriesPage />} />

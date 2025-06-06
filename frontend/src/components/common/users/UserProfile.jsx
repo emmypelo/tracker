@@ -351,10 +351,10 @@ export default function UserProfile() {
 
           {!isEditing && (
             <div className="mt-8 pt-6 border-t border-gray-200">
-              <div className="flex flex-wrap gap-3">
-                <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors">
+              <div className="flex flex-wrap gap-3 justify-center">
+                {/* <button className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-md transition-colors">
                   Change Password
-                </button>
+                </button> */}
                 <button className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors">
                   Delete Account
                 </button>

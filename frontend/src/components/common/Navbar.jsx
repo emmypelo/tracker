@@ -266,7 +266,9 @@ export default function Navbar() {
                     whileHover={{ scale: 1.05 }}
                     className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg"
                   >
-                    <User className="text-gray-900" size={20} />
+                    <Link to={'manage/profile'}> <User className="text-gray-900" size={20} />
+                    </Link>
+                   
                     <span className="sr-only">{name}</span>
                   </motion.div>
                   <motion.button

@@ -334,48 +334,40 @@ const userController = {
   }),
 
   // Forgot password (sending email token)
-  forgotPassword: asyncHandler(async (req, res) => {
-    const { email } = req.body;
-
+  forgotPassword:asyncHandler(async (req, res) => {
+    const { email } = req.body
+  
     if (!email) {
-      return sendResponse(res, 400, "error", "Email is required");
+      return sendResponse(res, 400, "error", "Email is required")
     }
-
+  
     try {
       // Find the user
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email })
       if (!user) {
         // For security reasons, don't reveal if user exists or not
-        return sendResponse(
-          res,
-          200,
-          "success",
-          `If a user with that email exists, a password reset link has been sent`
-        );
+        return sendResponse(res, 200, "success", `If a user with that email exists, a password reset link has been sent`)
       }
-
+  
       // Use the method from the model
-      const token = await user.generatePasswordResetToken();
+      const token = await user.generatePasswordResetToken()
+  
       // Save the user
-      await user.save();
+      await user.save()
+  
       // Send the email
-      await sendPasswordMail(user.email, token);
-
-      return sendResponse(
-        res,
-        200,
-        "success",
-        `If a user with that email exists, a password reset link has been sent`
-      );
+      await sendPasswordMail(user.email, token)
+  
+      return sendResponse(res, 200, "success", `If a user with that email exists, a password reset link has been sent`)
     } catch (error) {
-      return sendResponse(
-        res,
-        500,
-        "error",
-        "An error occurred while processing your request",
-        null,
-        error.message
-      );
+      console.error("Forgot password error:", error)
+  
+      // More specific error handling
+      if (error.message.includes("Gmail authentication")) {
+        return sendResponse(res, 500, "error", "Email service configuration error. Please contact support.")
+      }
+  
+      return sendResponse(res, 500, "error", "An error occurred while processing your request. Please try again later.")
     }
   }),
 

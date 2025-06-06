@@ -136,6 +136,7 @@ export const resetPasswordApi = async (data) => {
     `${baseUrl}/reset-password/${data?.verifyToken}`,
     {
       password: data?.password,
+      confirmPassword: data?.confirmPassword,
     },
     {
       withCredentials: true,

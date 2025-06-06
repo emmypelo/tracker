@@ -2,23 +2,24 @@ import { createTransport } from "nodemailer";
 
 const sendPasswordMail = async (to, token) => {
   try {
-    // 1. Create transporter
+    console.log("Attempting to send email to:", to);
+
+    // 1. Create transporter with better configuration
     const transporter = createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
+      service: "gmail", // Use service instead of manual config
       auth: {
-        user: process.env.GMAIL_USER || "emmypeloguns@gmail.com",
-        pass: process.env.GMAIL_PASS || "exvh wkaj qpjg mtiz",
-      },
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: "SSLv3",
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS, // This should be your App Password
       },
     });
 
-    // 2. Create the message with improved HTML template
+    // 2. Verify transporter configuration
+    await transporter.verify();
+    console.log("SMTP connection verified successfully");
+
+    // 3. Create the message
     const message = {
+      from: process.env.GMAIL_USER,
       to,
       subject: "Password Reset Request",
       html: `
@@ -36,9 +37,18 @@ const sendPasswordMail = async (to, token) => {
                 <h1 style="color: #4a4a4a; margin-bottom: 20px;">Password Reset Request</h1>
                 <p style="margin-bottom: 15px;">You are receiving this email because a password reset was requested for your account.</p>
                 <p style="margin-bottom: 25px;">If you did not request this, please ignore this email and your password will remain unchanged.</p>
-                <a href="http://localhost:5173/reset-password/${token}" style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Reset Your Password</a>
+                <a href="${
+                  process.env.FRONTEND_URL || "http://localhost:5173"
+                }/reset-password/${token}" 
+                   style="display: inline-block; background-color: #007bff; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">
+                   Reset Your Password
+                </a>
                 <p style="margin-top: 25px; font-size: 0.9em; color: #666;">If the button above doesn't work, copy and paste this link into your browser:</p>
-                <p style="font-size: 0.9em; color: #666; word-break: break-all;">http://localhost:5173/reset-password/${token}</p>
+                <p style="font-size: 0.9em; color: #666; word-break: break-all;">
+                  ${
+                    process.env.FRONTEND_URL || "http://localhost:5173"
+                  }/reset-password/${token}
+                </p>
                 <p style="margin-top: 30px; font-size: 0.8em; color: #999;">This is an automated message, please do not reply.</p>
               </td>
             </tr>
@@ -48,12 +58,24 @@ const sendPasswordMail = async (to, token) => {
       `,
     };
 
-    // 3. Send the email
+    // 4. Send the email
     const info = await transporter.sendMail(message);
+    console.log("Email sent successfully:", info.messageId);
 
     return info;
   } catch (error) {
-    throw new Error("Email sending failed");
+    console.error("Email sending error:", error);
+
+    // Provide more specific error messages
+    if (error.code === "EAUTH") {
+      throw new Error(
+        "Gmail authentication failed. Please check your credentials and enable App Password."
+      );
+    } else if (error.code === "ECONNECTION") {
+      throw new Error("Failed to connect to Gmail SMTP server.");
+    } else {
+      throw new Error(`Email sending failed: ${error.message}`);
+    }
   }
 };
 

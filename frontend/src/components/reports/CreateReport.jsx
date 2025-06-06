@@ -1,4 +1,4 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useFormik } from "formik";
@@ -7,41 +7,29 @@ import Select from "react-select";
 import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import { fetchReportCategoriesApi } from "../../APIrequests/reportCategoryAPI";
 import { createReportApi } from "../../APIrequests/reportAPI";
-import Modal from "../common/Modal";
 import { fetchStationsApi } from "../../APIrequests/stationsAPI";
+import Modal from "../common/Modal";
+
+// Common styles
+const INPUT_CLASSES = "w-full rounded-md border p-2.5";
+const ERROR_CLASSES = "border-red-500";
+const NORMAL_CLASSES = "border-gray-300";
+const LABEL_CLASSES = "mb-1 block text-sm font-medium text-gray-700 text-left";
+const ERROR_MESSAGE_CLASSES =
+  "absolute right-4 top-0 mt-1 text-sm text-red-500";
+const BUTTON_CLASSES =
+  "mt-8 w-1/3 rounded-lg bg-blue-600 px-5 py-3 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
 const CreateReport = () => {
   const navigate = useNavigate();
-
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    message: "",
+    isError: false,
+  });
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [filteredStations, setFilteredStations] = useState([]);
-
-  const reportMutation = useMutation({
-    mutationFn: createReportApi,
-    onSuccess: () => {
-      setIsError(false);
-      setModalMessage("Report created successfully");
-      setIsModalOpen(true);
-    },
-    onError: (error) => {
-      setIsError(true);
-      let errorMessage = "Report creation failed";
-
-      if (error.response?.status === 401 || error.message.includes("401")) {
-        errorMessage = "Login required";
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-
-      setModalMessage(errorMessage);
-      setIsModalOpen(true);
-    },
-  });
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMessage, setModalMessage] = useState("");
-  const [isError, setIsError] = useState(false);
 
   const { data: regionsData } = useQuery({
     queryKey: ["fetchRegions"],
@@ -56,6 +44,28 @@ const CreateReport = () => {
   const { data: stationsData } = useQuery({
     queryKey: ["fetchStations"],
     queryFn: fetchStationsApi,
+  });
+
+  const reportMutation = useMutation({
+    mutationFn: createReportApi,
+    onSuccess: () => {
+      setModalState({
+        isOpen: true,
+        message: "Report created successfully",
+        isError: false,
+      });
+    },
+    onError: (error) => {
+      const errorMessage =
+        error.response?.status === 401 || error.message.includes("401")
+          ? "Login required"
+          : error.response?.data?.message || "Report creation failed";
+      setModalState({
+        isOpen: true,
+        message: errorMessage,
+        isError: true,
+      });
+    },
   });
 
   const formik = useFormik({
@@ -74,27 +84,15 @@ const CreateReport = () => {
       description: Yup.string(),
       station: Yup.string().required("Station is required"),
       pump: Yup.string().when("reportCategory", {
-        is: (category) => {
-          const pumpCategory = reportCategoriesData?.data?.categories?.find(
-            (c) => c.title === "Pumps"
-          );
-          return category === pumpCategory?._id;
-        },
+        is: (category) =>
+          reportCategoriesData?.data?.categories?.find(
+            (c) => c._id === category && c.title === "Pumps"
+          ),
         then: () => Yup.string().required("Pump info required"),
         otherwise: () => Yup.string(),
       }),
     }),
-    onSubmit: async (values) => {
-      try {
-        const formattedValues = {
-          ...values,
-        };
-
-        await reportMutation.mutateAsync(formattedValues);
-      } catch (error) {
-        console.error("Error in form submission:", error);
-      }
-    },
+    onSubmit: (values) => reportMutation.mutate(values),
   });
 
   useEffect(() => {
@@ -103,242 +101,194 @@ const CreateReport = () => {
         (station) => station.region._id === selectedRegion
       );
       setFilteredStations(stations);
+      // Only reset station if the current station is not in the filtered list
+      if (
+        formik.values.station &&
+        !stations.find((station) => station._id === formik.values.station)
+      ) {
+        formik.setFieldValue("station", "");
+      }
+    } else {
+      setFilteredStations([]);
+      if (formik.values.station) {
+        formik.setFieldValue("station", "");
+      }
     }
-  }, [selectedRegion, stationsData]);
+  }, [selectedRegion, stationsData]); // Removed formik from dependencies
 
-  const renderError = (field) =>
-    formik.touched[field] &&
-    formik.errors[field] && (
-      <p className="mt-1 text-sm text-red-500 absolute top-0 right-4">
-        {formik.errors[field]}
-      </p>
-    );
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    if (!isError) {
+  const closeModal = useCallback(() => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+    if (!modalState.isError) {
       formik.resetForm();
       navigate("/reports");
     }
-  };
+  }, [modalState.isError, formik, navigate]);
+
+  const renderError = useCallback(
+    (field) =>
+      formik.touched[field] &&
+      formik.errors[field] && (
+        <p className={ERROR_MESSAGE_CLASSES}>{formik.errors[field]}</p>
+      ),
+    [formik.touched, formik.errors]
+  );
+
+  const getSelectStyles = useCallback(
+    (field) => ({
+      control: (baseStyles) => ({
+        ...baseStyles,
+        borderColor:
+          formik.touched[field] && formik.errors[field] ? "#ef4444" : "#d1d5db",
+        boxShadow: "none",
+      }),
+    }),
+    [formik.touched, formik.errors]
+  );
+
+  const renderInput = useCallback(
+    ({ id, label, type = "text", placeholder, extraProps = {} }) => (
+      <div className="relative">
+        <label htmlFor={id} className={LABEL_CLASSES}>
+          {label}
+        </label>
+        {renderError(id)}
+        <input
+          id={id}
+          type={type}
+          placeholder={placeholder}
+          {...formik.getFieldProps(id)}
+          {...extraProps}
+          className={`${INPUT_CLASSES} ${
+            formik.touched[id] && formik.errors[id]
+              ? ERROR_CLASSES
+              : NORMAL_CLASSES
+          }`}
+        />
+      </div>
+    ),
+    [formik, renderError]
+  );
+
+  const renderTextarea = useCallback(
+    ({ id, label, placeholder }) => (
+      <div className="relative">
+        <label htmlFor={id} className={LABEL_CLASSES}>
+          {label}
+        </label>
+        {renderError(id)}
+        <textarea
+          id={id}
+          placeholder={placeholder}
+          {...formik.getFieldProps(id)}
+          className={`${INPUT_CLASSES} ${
+            formik.touched[id] && formik.errors[id]
+              ? ERROR_CLASSES
+              : NORMAL_CLASSES
+          }`}
+        />
+      </div>
+    ),
+    [formik, renderError]
+  );
+
+  const renderSelect = useCallback(
+    ({ id, label, options, placeholder, isDisabled = false, onChange }) => (
+      <div className="relative">
+        <label htmlFor={id} className={LABEL_CLASSES}>
+          {label}
+        </label>
+        {renderError(id)}
+        <Select
+          id={id}
+          options={options || []}
+          placeholder={placeholder}
+          onChange={onChange}
+          value={
+            options?.find((option) => option.value === formik.values[id]) ||
+            null
+          }
+          isDisabled={isDisabled}
+          styles={getSelectStyles(id)}
+          className="text-left"
+        />
+      </div>
+    ),
+    [formik, renderError, getSelectStyles]
+  );
 
   return (
-    <div className="flex flex-col w-full items-center mx-auto">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          formik.handleSubmit(e);
-        }}
-        className="relative w-full space-y-2 p-6"
-      >
-        <h2 className="text-2xl font-bold text-slate-800 text-center capitalize">
+    <div className="mx-auto flex w-full flex-col items-center">
+      <form onSubmit={formik.handleSubmit} className="w-full space-y-2 p-6">
+        <h2 className="text-center text-2xl font-bold text-slate-800 capitalize">
           Create New Report
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Title Input */}
-          <div className="relative">
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700 mb-1 text-left"
-            >
-              Title
-            </label>
-            {renderError("title")}
-            <input
-              id="title"
-              type="text"
-              placeholder="Enter report title"
-              {...formik.getFieldProps("title")}
-              className={`w-full p-2.5 border rounded-md ${
-                formik.touched.title && formik.errors.title
-                  ? "border-red-500"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
-
-          {/* Region Select */}
-          <div className="relative">
-            <label
-              htmlFor="region"
-              className="block text-sm font-medium text-gray-700 mb-1 text-left"
-            >
-              Region
-            </label>
-            {renderError("region")}
-            <Select
-              id="region"
-              options={regionsData?.data?.regions?.map((region) => ({
-                value: region._id,
-                label: region.title,
-              }))}
-              onChange={(option) => {
-                formik.setFieldValue("region", option.value);
-                setSelectedRegion(option.value);
-                formik.setFieldValue("station", "");
-              }}
-              className={`${
-                formik.touched.region && formik.errors.region
-                  ? "border-red-500"
-                  : ""
-              }`}
-              styles={{
-                control: (baseStyles) => ({
-                  ...baseStyles,
-                  borderColor:
-                    formik.touched.region && formik.errors.region
-                      ? "#ef4444"
-                      : "#d1d5db",
-                  boxShadow: "none",
-                }),
-              }}
-            />
-          </div>
-
-          {/* Station Select */}
-          <div className="relative">
-            <label
-              htmlFor="station"
-              className="block text-sm font-medium text-gray-700 mb-1 text-left"
-            >
-              Station
-            </label>
-            {renderError("station")}
-            <Select
-              id="station"
-              options={filteredStations.map((station) => ({
-                value: station._id,
-                label: station.name,
-              }))}
-              onChange={(option) =>
-                formik.setFieldValue("station", option.value)
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {renderInput({
+            id: "title",
+            label: "Title",
+            placeholder: "Enter report title",
+          })}
+          {renderSelect({
+            id: "region",
+            label: "Region",
+            options: regionsData?.data?.regions?.map((region) => ({
+              value: region._id,
+              label: region.title,
+            })),
+            placeholder: "Select a Region",
+            onChange: (option) => {
+              formik.setFieldValue("region", option.value);
+              setSelectedRegion(option.value);
+            },
+          })}
+          {renderSelect({
+            id: "station",
+            label: "Station",
+            options: filteredStations.map((station) => ({
+              value: station._id,
+              label: station.name,
+            })),
+            placeholder: "Select a Station",
+            isDisabled: !selectedRegion,
+            onChange: (option) => formik.setFieldValue("station", option.value),
+          })}
+          {renderSelect({
+            id: "reportCategory",
+            label: "Report Category",
+            options: reportCategoriesData?.data?.categories?.map(
+              (category) => ({
+                value: category._id,
+                label: category.title,
+              })
+            ),
+            placeholder: "Select a Category",
+            onChange: (option) => {
+              formik.setFieldValue("reportCategory", option.value);
+              setSelectedCategory(option.value);
+              if (option.label !== "Pumps") {
+                formik.setFieldValue("pump", "");
               }
-              value={
-                filteredStations.find(
-                  (station) => station._id === formik.values.station
-                )
-                  ? {
-                      value: formik.values.station,
-                      label: filteredStations.find(
-                        (station) => station._id === formik.values.station
-                      ).name,
-                    }
-                  : null
-              }
-              isDisabled={!selectedRegion}
-              className={`${
-                formik.touched.station && formik.errors.station
-                  ? "border-red-500"
-                  : ""
-              }`}
-              styles={{
-                control: (baseStyles) => ({
-                  ...baseStyles,
-                  borderColor:
-                    formik.touched.station && formik.errors.station
-                      ? "#ef4444"
-                      : "#d1d5db",
-                  boxShadow: "none",
-                }),
-              }}
-            />
-          </div>
-
-          {/* Report Category Select */}
-          <div className="relative">
-            <label
-              htmlFor="reportCategory"
-              className="block text-sm font-medium text-gray-700 mb-1 text-left"
-            >
-              Report Category
-            </label>
-            {renderError("reportCategory")}
-            <Select
-              id="reportCategory"
-              options={reportCategoriesData?.data?.categories?.map(
-                (category) => ({
-                  value: category._id,
-                  label: category.title,
-                })
-              )}
-              onChange={(option) => {
-                formik.setFieldValue("reportCategory", option.value);
-                setSelectedCategory(option.value);
-                if (option.label !== "Pumps") {
-                  formik.setFieldValue("pump", "");
-                }
-              }}
-              className={`${
-                formik.touched.reportCategory && formik.errors.reportCategory
-                  ? "border-red-500"
-                  : ""
-              }`}
-              styles={{
-                control: (baseStyles) => ({
-                  ...baseStyles,
-                  borderColor:
-                    formik.touched.reportCategory &&
-                    formik.errors.reportCategory
-                      ? "#ef4444"
-                      : "#d1d5db",
-                  boxShadow: "none",
-                }),
-              }}
-            />
-          </div>
-
-          {/* Pump Input (Conditional) */}
+            },
+          })}
           {reportCategoriesData?.data?.categories?.find(
             (c) => c._id === selectedCategory
-          )?.title === "Pumps" && (
-            <div className="relative">
-              <label
-                htmlFor="pump"
-                className="block text-sm font-medium text-gray-700 mb-1 text-left"
-              >
-                Pump
-              </label>
-              {renderError("pump")}
-              <input
-                id="pump"
-                type="text"
-                placeholder="Enter pump details"
-                {...formik.getFieldProps("pump")}
-                className={`w-full p-2.5 border rounded-md ${
-                  formik.touched.pump && formik.errors.pump
-                    ? "border-red-500"
-                    : "border-gray-300"
-                }`}
-              />
-            </div>
-          )}
-
-          {/* Description Input */}
-          <div className="relative">
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 mb-1 text-left"
-            >
-              Description
-            </label>
-            {renderError("description")}
-            <textarea
-              id="description"
-              placeholder="Enter description"
-              {...formik.getFieldProps("description")}
-              className={`w-full p-2.5 border rounded-md ${
-                formik.touched.description && formik.errors.description
-                  ? "border-red-500"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
+          )?.title === "Pumps" &&
+            renderInput({
+              id: "pump",
+              label: "Pump",
+              placeholder: "Enter pump details",
+            })}
+          {renderTextarea({
+            id: "description",
+            label: "Description",
+            placeholder: "Enter description",
+          })}
         </div>
 
         <button
           type="submit"
-          className="w-1/3 px-5 py-3 mt-8 text-base font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className={BUTTON_CLASSES}
           disabled={formik.isSubmitting}
         >
           {formik.isSubmitting ? "Creating Report..." : "Create Report"}
@@ -346,16 +296,16 @@ const CreateReport = () => {
       </form>
 
       <Modal
-        isOpen={isModalOpen}
+        isOpen={modalState.isOpen}
         onClose={closeModal}
-        title={isError ? "Error" : "Success"}
+        title={modalState.isError ? "Error" : "Success"}
       >
         <p
           className={`text-center ${
-            isError ? "text-red-600" : "text-green-600"
+            modalState.isError ? "text-red-600" : "text-green-600"
           }`}
         >
-          {modalMessage}
+          {modalState.message}
         </p>
       </Modal>
     </div>

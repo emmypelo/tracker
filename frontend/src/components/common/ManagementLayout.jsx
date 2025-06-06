@@ -8,12 +8,18 @@ import {
   ChevronLast,
   ChevronFirst,
   Home,
-  List,
   FileText,
   MapPin,
   Globe,
   Folder,
   Building,
+  User2Icon,
+  PersonStandingIcon,
+  UserCog,
+  BookUser,
+  HousePlug,
+  FolderTree,
+  FolderClock,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import StatCard from "./StatCard";
@@ -135,36 +141,33 @@ const ManagementLayout = () => {
   console.log(regions);
   const navItems = [
     { to: "/manage", text: "Overview", icon: <Home size={20} />, end: true },
-    {
-      to: "/manage/addcategory",
-      text: "Task Category",
-      icon: <List size={20} />,
-    },
+
     {
       to: "/manage/reportcategory",
       text: "Report Category",
-      icon: <FileText size={20} />,
+      icon: <FolderClock size={20} />,
     },
-    {
-      to: "/manage/addstation",
-      text: "Add Station",
-      icon: <MapPin size={20} />,
-    },
+
     { to: "/manage/addregion", text: "Add Region", icon: <Globe size={20} /> },
     {
       to: "/manage/categories",
-      text: "Manage Categories",
-      icon: <Folder size={20} />,
+      text: "Task Categories",
+      icon: <FolderTree size={20} />,
     },
     {
       to: "/manage/stations",
-      text: "All Stations",
-      icon: <Building size={20} />,
+      text: "Stations",
+      icon: <HousePlug size={20} />,
     },
     {
       to: "/manage/users",
-      text: "All Users",
-      icon: <Building size={20} />,
+      text: "Users",
+      icon: <BookUser size={20} />,
+    },
+    {
+      to: "/manage/profile",
+      text: "Profile",
+      icon: <UserCog size={20} />,
     },
   ];
 
