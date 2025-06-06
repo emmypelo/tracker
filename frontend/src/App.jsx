@@ -8,6 +8,7 @@ import Navbar from "./components/common/Navbar";
 import "../src/index.css";
 import "../src/App.css";
 import Allusers from "./components/common/users/Allusers";
+import UserProfilePage from "./pages/UserProfilePage";
 // Lazy load all components
 const Home = lazy(() => import("./pages/Home"));
 const SignInPage = lazy(() => import("./pages/SignInPage"));
@@ -83,6 +84,7 @@ const App = () => {
                     <Route path="addregion" element={<AddRegionPage />} />
                     <Route path="categories" element={<TaskCategoriesPage />} />
                     <Route path="users" element={<Allusers />} />
+                    <Route path="profile" element={<UserProfilePage />} />
 
                     <Route
                       path="categories/:categoryId"
