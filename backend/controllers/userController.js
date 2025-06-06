@@ -4,7 +4,6 @@ dotenv.config();
 import bcrypt from "bcryptjs";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-import passport from "passport";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import User from "../models/User.js";
@@ -31,6 +30,31 @@ const safeObjectId = (id) => {
     console.error("Error converting ID:", error);
     return null;
   }
+};
+
+// Generate JWT token
+const generateToken = (user) => {
+  return jwt.sign(
+    {
+      id: user._id.toString(),
+      role: user.role || "user",
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d", // Extended to 7 days for better user experience
+    }
+  );
+};
+
+// Set cookie options based on environment
+const getCookieOptions = () => {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Only secure in production
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
 };
 
 const userController = {
@@ -98,7 +122,7 @@ const userController = {
       }
 
       // Hash password
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Create new user
@@ -109,16 +133,25 @@ const userController = {
         password: hashedPassword,
       });
 
+      // Generate token for auto-login after registration
+      const token = generateToken(newUser);
+
+      // Set token in cookie
+      res.cookie("TrackIt", token, getCookieOptions());
+
       // Remove password from response
       const userResponse = {
         _id: newUser._id,
         firstname: newUser.firstname,
         lastname: newUser.lastname,
         email: newUser.email,
+        role: newUser.role || "user",
       };
 
       return sendResponse(res, 201, "success", "User created successfully", {
         user: userResponse,
+        isAuthenticated: true,
+        token: process.env.NODE_ENV === "development" ? token : undefined, // Only include token in development
       });
     } catch (error) {
       return sendResponse(
@@ -132,57 +165,53 @@ const userController = {
     }
   }),
 
-  // User login
-  loginUser: asyncHandler(async (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err);
+  // User login - Replaced Passport with direct JWT authentication
+  loginUser: asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return sendResponse(res, 400, "error", "Email and password are required");
+    }
+
+    try {
+      // Find user by email
+      const user = await User.findOne({ email });
       if (!user) {
-        return sendResponse(
-          res,
-          401,
-          "error",
-          info?.message || "Authentication failed"
-        );
+        return sendResponse(res, 401, "error", "Invalid email or password");
       }
 
-      try {
-        // Generate JWT token - ensure ID is a string
-        const token = jwt.sign(
-          { id: user._id.toString(), role: user.role || "user" },
-          process.env.JWT_SECRET,
-          {
-            expiresIn: "1d",
-          }
-        );
-
-        // Set token in cookie with improved settings
-        res.cookie("TrackIt", token, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "lax", 
-          // domain: process.env.COOKIE_DOMAIN,
-          maxAge: 24 * 60 * 60 * 1000, // 1 day
-        });
-
-        return sendResponse(res, 200, "success", "Login Success", {
-          isAuthenticated: true,
-          firstname: user.firstname,
-          lastname: user.lastname,
-          email: user.email,
-          _id: user._id,
-          role: user.role || "user",
-        });
-      } catch (error) {
-        return sendResponse(
-          res,
-          500,
-          "error",
-          "Login failed",
-          null,
-          error.message
-        );
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return sendResponse(res, 401, "error", "Invalid email or password");
       }
-    })(req, res, next);
+
+      // Generate JWT token
+      const token = generateToken(user);
+
+      // Set token in cookie
+      res.cookie("TrackIt", token, getCookieOptions());
+
+      return sendResponse(res, 200, "success", "Login Success", {
+        isAuthenticated: true,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        _id: user._id,
+        role: user.role || "user",
+        token: process.env.NODE_ENV === "development" ? token : undefined, // Only include token in development
+      });
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "Login failed",
+        null,
+        error.message
+      );
+    }
   }),
 
   // Fetch all users
@@ -277,7 +306,17 @@ const userController = {
 
   // Check authentication status
   checkAuthentication: asyncHandler(async (req, res) => {
-    const token = req.cookies["TrackIt"];
+    // Get token from cookie or Authorization header
+    let token = req.cookies?.TrackIt;
+
+    // If no cookie, check Authorization header
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
+    }
+
     if (!token) {
       return sendResponse(res, 401, "error", "User is not authenticated", {
         isAuthenticated: false,
@@ -305,6 +344,17 @@ const userController = {
         });
       }
 
+      // Refresh token if it's close to expiry (optional)
+      const tokenExp = new Date(decodedUser.exp * 1000);
+      const now = new Date();
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (tokenExp.getTime() - now.getTime() < oneDay) {
+        // Token expires in less than a day, refresh it
+        const newToken = generateToken(user);
+        res.cookie("TrackIt", newToken, getCookieOptions());
+      }
+
       return sendResponse(res, 200, "success", "User is authenticated", {
         isAuthenticated: true,
         firstname: user.firstname,
@@ -314,6 +364,9 @@ const userController = {
         role: user.role || "user",
       });
     } catch (error) {
+      // Clear invalid token
+      res.cookie("TrackIt", "", { maxAge: 1 });
+
       return sendResponse(
         res,
         401,
@@ -329,11 +382,11 @@ const userController = {
   logout: asyncHandler(async (req, res) => {
     res.cookie("TrackIt", "", {
       httpOnly: true,
-      secure: true,
-      sameSite: "lax", 
-      // domain: process.env.COOKIE_DOMAIN, 
-      maxAge: 1,
-    }); // Expire cookie immediately
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 1, // Expire immediately
+    });
+
     return sendResponse(res, 200, "success", "Logged out successfully");
   }),
 
@@ -443,7 +496,7 @@ const userController = {
         );
       }
 
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12);
       userFound.password = await bcrypt.hash(password, salt);
       userFound.passwordResetToken = null;
       userFound.passwordResetExpires = null;
@@ -451,7 +504,13 @@ const userController = {
       // Save the user
       await userFound.save();
 
-      return sendResponse(res, 200, "success", "Password successfully reset");
+      // Generate a new token and log the user in automatically
+      const token = generateToken(userFound);
+      res.cookie("TrackIt", token, getCookieOptions());
+
+      return sendResponse(res, 200, "success", "Password successfully reset", {
+        isAuthenticated: true,
+      });
     } catch (error) {
       return sendResponse(
         res,
@@ -507,9 +566,8 @@ const userController = {
       if (currentUser._id.toString() === userId) {
         res.cookie("TrackIt", "", {
           httpOnly: true,
-          secure: true,
-          sameSite: "lax", // Changed from 'strict' to 'lax'
-          // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
           maxAge: 1,
         });
       }
@@ -774,9 +832,13 @@ const userController = {
       }
 
       // Hash and update password
-      const salt = await bcrypt.genSalt(10);
+      const salt = await bcrypt.genSalt(12);
       user.password = await bcrypt.hash(newPassword, salt);
       await user.save();
+
+      // Generate a new token with updated credentials
+      const token = generateToken(user);
+      res.cookie("TrackIt", token, getCookieOptions());
 
       return sendResponse(res, 200, "success", "Password changed successfully");
     } catch (error) {
@@ -790,6 +852,66 @@ const userController = {
       );
     }
   }),
+
+  // Middleware for protecting routes
+  protect: asyncHandler(async (req, res, next) => {
+    // Get token from cookie or Authorization header
+    let token = req.cookies?.TrackIt;
+
+    // If no cookie, check Authorization header
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
+      return sendResponse(res, 401, "error", "Not authorized, no token");
+    }
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Get user from the token
+      const userId = safeObjectId(decoded.id);
+      if (!userId) {
+        return sendResponse(res, 401, "error", "Invalid user ID");
+      }
+
+      req.user = await User.findById(userId).select("-password");
+      if (!req.user) {
+        return sendResponse(res, 401, "error", "User not found");
+      }
+
+      next();
+    } catch (error) {
+      console.error("Auth middleware error:", error);
+
+      // Clear invalid token
+      res.cookie("TrackIt", "", { maxAge: 1 });
+
+      if (error.name === "JsonWebTokenError") {
+        return sendResponse(res, 401, "error", "Invalid token");
+      }
+
+      if (error.name === "TokenExpiredError") {
+        return sendResponse(res, 401, "error", "Token expired");
+      }
+
+      return sendResponse(res, 401, "error", "Not authorized");
+    }
+  }),
+
+  // Middleware to restrict to admin only
+  admin: (req, res, next) => {
+    if (req.user && req.user.role === "admin") {
+      next();
+    } else {
+      return sendResponse(res, 403, "error", "Not authorized as an admin");
+    }
+  },
 };
 
 export default userController;

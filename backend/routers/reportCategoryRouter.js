@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import isAuthenticated from "../middlewares/isAuthenticated.js";
+import {isAuthenticated} from "../middlewares/isAuthenticated.js";
 import reportCategoryController from "../controllers/reportCategoryController.js";
 
 const reportCategoryRouter = Router();

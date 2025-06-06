@@ -1,6 +1,6 @@
 import { Router } from "express";
 import subCategoryController from "../controllers/subCategoryController.js";
-import isAuthenticated from "../middlewares/isAuthenticated.js";
+import {isAuthenticated} from "../middlewares/isAuthenticated.js";
 
 const subCategoryRouter = Router();
 

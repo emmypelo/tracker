@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import isAuthenticated from "../middlewares/isAuthenticated.js";
+import {isAuthenticated} from "../middlewares/isAuthenticated.js";
 import stationController from "../controllers/stationController.js";
 
 const stationRouter = Router();
