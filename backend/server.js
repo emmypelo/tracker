@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import passport from "passport";
-import { localStrategy, jwtStrategy } from "./utilities/passportConfig.js"; //strategies
+import { localStrategy, jwtStrategy } from "./utilities/passportConfig.js";
 import cookieParser from "cookie-parser";
 import taskRouter from "./routers/taskRouter.js";
 import userRouter from "./routers/userRouter.js";
@@ -15,23 +15,41 @@ import reportCategoryRouter from "./routers/reportCategoryRouter.js";
 import stationRouter from "./routers/stationRouter.js";
 import reportRouter from "./routers/reportRouter.js";
 
-// create Express instance in app
 const app = express();
-
 const port = process.env.PORT;
 
-app.use(express.json());
-// cors configuration
-const corsOptions = {
-  origin: ["https://tracker-rust-zeta.vercel.app"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
-app.use(cors(corsOptions));
-app.use(passport.initialize());
+// Important: cookieParser should come before passport initialization
 app.use(cookieParser());
+app.use(express.json());
+
+// Enhanced CORS configuration
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV === "production"
+      ? ["https://tracker-rust-zeta.vercel.app"]
+      : ["http://localhost:3000", "http://127.0.0.1:3000"],
+  credentials: true, // This is crucial for cookies
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+  exposedHeaders: ["Set-Cookie"],
+};
+
+app.use(cors(corsOptions));
+
+// Debugging middleware to see what's happening with cookies
+app.use((req, res, next) => {
+  console.log("Cookies received:", req.cookies);
+  console.log("Headers:", req.headers);
+  next();
+});
+
+// Initialize passport after cookieParser
+app.use(passport.initialize());
+
+// Initialize strategies
 localStrategy();
 jwtStrategy();
+
 // Routes
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
@@ -52,6 +70,7 @@ app.use((err, req, res, next) => {
   const stack = err.stack;
   res.status(500).json({ message, stack });
 });
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {

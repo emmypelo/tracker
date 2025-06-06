@@ -158,9 +158,9 @@ const userController = {
         // Set token in cookie with improved settings
         res.cookie("TrackIt", token, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production", // Keep this
-          sameSite: "lax", // Changed from 'strict' to 'lax'
-          // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
+          secure: true,
+          sameSite: "lax", 
+          // domain: process.env.COOKIE_DOMAIN,
           maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
@@ -329,9 +329,9 @@ const userController = {
   logout: asyncHandler(async (req, res) => {
     res.cookie("TrackIt", "", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // Changed from 'strict' to 'lax'
-      // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
+      secure: true,
+      sameSite: "lax", 
+      // domain: process.env.COOKIE_DOMAIN, 
       maxAge: 1,
     }); // Expire cookie immediately
     return sendResponse(res, 200, "success", "Logged out successfully");
@@ -507,7 +507,7 @@ const userController = {
       if (currentUser._id.toString() === userId) {
         res.cookie("TrackIt", "", {
           httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
+          secure: true,
           sameSite: "lax", // Changed from 'strict' to 'lax'
           // domain: process.env.COOKIE_DOMAIN, // Uncomment and set if needed
           maxAge: 1,
