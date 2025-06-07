@@ -207,6 +207,7 @@ const taskController = {
       if (req.body.isCompleted !== undefined)
         updateFields.isCompleted = req.body.isCompleted;
       if (req.body.remark !== undefined) updateFields.remark = req.body.remark;
+      if (req.body.isOngoing !== undefined) updateFields.isOngoing = req.body.isOngoing;
 
       // Update the task
       const taskUpdated = await Task.findByIdAndUpdate(taskId, updateFields, {

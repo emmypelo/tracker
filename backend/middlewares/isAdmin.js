@@ -21,8 +21,6 @@ const isAdmin = async (req, res, next) => {
       });
     }
 
-    console.log("User details:", userDetails);
-
     // Check if user has admin role
     if (userDetails.role !== "admin") {
       return res.status(403).json({

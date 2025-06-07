@@ -51,14 +51,12 @@ export const jwtStrategy = () => {
     new JWTStrategy(options, async (userDecoded, done) => {
       try {
         // Debug what's actually in the token
-        console.log("JWT payload:", userDecoded);
 
         // Fix: Use 'id' instead of 'sub' since that's what you're signing with
         const user = await User.findById(userDecoded.id);
         if (user) {
           return done(null, user);
         } else {
-          console.log("No user found with ID:", userDecoded.id);
           return done(null, false);
         }
       } catch (error) {

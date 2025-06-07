@@ -20,7 +20,6 @@ import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { Search, X } from "lucide-react";
 import debounce from "lodash/debounce";
 
-
 const StationManagement = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,6 +68,7 @@ const StationManagement = () => {
   const {
     isError: isStationsError,
     data: stationsData,
+    isLoading: isStationsLoading,
     error: stationsError,
     refetch: stationRefetch,
   } = useQuery({
@@ -379,7 +379,39 @@ const StationManagement = () => {
 
             {/* Stations Table */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              {stations.length === 0 ? (
+              {isStationsLoading ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          #
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Station Name
+                        </th>
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Region
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Manager
+                        </th>
+                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Phone
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <SkeletonRow key={index} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : stations.length === 0 ? (
                 <div className="text-center py-12">
                   <p className="text-gray-500 text-lg">No stations found</p>
                   <button
@@ -670,3 +702,12 @@ const StationManagement = () => {
 };
 
 export default StationManagement;
+const SkeletonRow = () => (
+  <tr className="animate-pulse">
+    {Array.from({ length: 6 }).map((_, i) => (
+      <td key={i} className="px-6 py-4">
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      </td>
+    ))}
+  </tr>
+);

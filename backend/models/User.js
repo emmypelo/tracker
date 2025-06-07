@@ -1,7 +1,6 @@
 import { Schema, model } from "mongoose";
 import { randomBytes, createHash } from "crypto";
 
-// Helper function for password reset token generation
 const generatePasswordResetToken = () => {
   const emailToken = randomBytes(20).toString("hex");
   const hashedToken = createHash("sha256").update(emailToken).digest("hex");
@@ -24,6 +23,7 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Email is required"],
       unique: true,
+      set: (value) => value.toLowerCase(),
     },
     isBlocked: {
       type: Boolean,
@@ -33,7 +33,6 @@ const userSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
     },
-
     role: {
       type: String,
       enum: ["user", "admin"],

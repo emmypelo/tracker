@@ -1,37 +1,58 @@
+"use client";
+
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { addReportCategoryApi } from "../../APIrequests/reportCategoryAPI";
-import { useSelector } from "react-redux";
+import {
+  fetchReportCategoriesApi,
+  addReportCategoryApi,
+} from "../../APIrequests/reportCategoryAPI";
 import Modal from "../common/Modal";
 
 const AddReportCategory = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { userAuth } = useSelector((state) => state.auth);
   const isAuthenticated = userAuth?.data?.isAuthenticated === true;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  // Fetch report categories
+  const {
+    data: reportCategoriesData,
+    error: reportCategoriesError,
+    isLoading: reportCategoriesLoading,
+  } = useQuery({
+    queryKey: ["reportCategories"],
+    queryFn: fetchReportCategoriesApi,
+  });
+
+  const reportCategories = reportCategoriesData?.data?.categories || [];
+
+  // Mutation for adding report category
   const mutation = useMutation({
     mutationKey: ["add-report-category"],
     mutationFn: (values) => addReportCategoryApi(values),
     onSuccess: () => {
+      queryClient.invalidateQueries(["reportCategories"]);
       setModalMessage("Report category added successfully.");
       setIsError(false);
-      setIsModalOpen(true);
+      setIsAddModalOpen(false);
+      formik.resetForm();
     },
     onError: (error) => {
       setModalMessage(error.response?.data?.message || "An error occurred.");
       setIsError(true);
-      setIsModalOpen(true);
     },
   });
 
+  // Formik setup for adding report category
   const formik = useFormik({
     initialValues: {
       title: "",
@@ -50,108 +71,456 @@ const AddReportCategory = () => {
     },
   });
 
+  // Render error for form fields
   const renderError = (field) =>
     formik.touched[field] &&
     formik.errors[field] && (
-      <p className="mt-1 text-sm text-red-500 absolute top-0 right-4">
+      <div className="mt-2 flex items-center text-red-500 text-sm">
+        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
         {formik.errors[field]}
-      </p>
+      </div>
     );
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    if (!isError) {
-      formik.resetForm();
-      navigate("/manage");
+  // Loading skeleton component
+  const LoadingSkeleton = () => (
+    <div className="animate-pulse space-y-4 p-6">
+      {[...Array(5)].map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center justify-between p-4 bg-gray-100 rounded-lg"
+        >
+          <div className="flex-1">
+            <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div className="h-6 bg-gray-300 rounded-full w-16"></div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Render list of report categories
+  const renderReportCategoriesList = (items, isLoading) => {
+    if (isLoading) {
+      return <LoadingSkeleton />;
     }
+
+    return (
+      <div className="p-6">
+        {items.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No report categories yet
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Get started by creating your first report category.
+            </p>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Report Category
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {items.map((item, index) => (
+              <div
+                key={item._id}
+                className="group bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <Link
+                  to={`/manage/report-categories/${item._id}`}
+                  className=" items-center justify-between p-6 block"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200">
+                          {item.title}
+                        </h3>
+                        {item.description && (
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
+                      <span className="text-sm font-medium text-gray-600">
+                        {item.reports?.length || 0} reports
+                      </span>
+                    </div>
+
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  return (
-    <section className="flex items-center justify-center md:w-3/5 mt-3 mx-auto w-full">
-      <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
-        {mutation.isLoading && (
-          <div className="absolute top-5 w-full text-center">
-            <h2 className="text-lg font-semibold text-blue-600">
-              Adding report category...
-            </h2>
-          </div>
-        )}
-        {mutation.isError && (
-          <div className="absolute top-5 w-full text-center">
-            <h2 className="text-lg font-semibold text-red-500">
-              {mutation.error?.response?.data?.message ||
-                mutation.error?.message}
-            </h2>
-          </div>
-        )}
-
-        <h2 className="text-2xl font-bold text-white bg-slate-900 rounded-t-lg py-2">
-          Add Report Category
-        </h2>
-        <form className="mt-8 p-4 space-y-6" onSubmit={formik.handleSubmit}>
-          <div className="relative">
-            <label
-              htmlFor="title"
-              className="text-left block mb-2 text-sm font-medium text-white"
-            >
-              Report Category Title
-            </label>
-            {renderError("title")}
-            <input
-              type="text"
-              name="title"
-              id="title"
-              {...formik.getFieldProps("title")}
-              placeholder="Enter report category title"
-              className={`bg-gray-50 border ${
-                formik.errors.title && formik.touched.title
-                  ? "border-red-500"
-                  : "border-gray-300"
-              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white`}
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="description"
-              className="text-left block mb-2 text-sm font-medium text-white"
-            >
-              Description
-            </label>
-            <input
-              type="text"
-              name="description"
-              id="description"
-              {...formik.getFieldProps("description")}
-              placeholder="Enter report category description"
-              className="border text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
-            disabled={formik.isSubmitting}
-          >
-            {formik.isSubmitting ? "Adding..." : "Add Report Category"}
-          </button>
-        </form>
-      </div>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        title={isError ? "Error" : "Success"}
-        buttonText="Close"
-      >
-        <p
-          className={`text-center ${
-            isError ? "text-red-600" : "text-green-600"
-          }`}
+  // Render add form
+  const renderAddForm = () => (
+    <form className="p-6 space-y-6" onSubmit={formik.handleSubmit}>
+      <div>
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-gray-700 mb-2"
         >
-          {modalMessage}
-        </p>
-      </Modal>
-    </section>
+          Report Category Title
+        </label>
+        <input
+          type="text"
+          name="title"
+          id="title"
+          {...formik.getFieldProps("title")}
+          placeholder="Enter report category title"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+            formik.errors.title && formik.touched.title
+              ? "border-red-300 bg-red-50"
+              : "border-gray-300 bg-white"
+          }`}
+        />
+        {renderError("title")}
+      </div>
+
+      <div>
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Description (Optional)
+        </label>
+        <textarea
+          name="description"
+          id="description"
+          rows={3}
+          {...formik.getFieldProps("description")}
+          placeholder="Enter report category description"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 resize-none"
+        />
+        {renderError("description")}
+      </div>
+
+      <div className="flex space-x-3 pt-4">
+        <button
+          type="button"
+          onClick={() => {
+            setIsAddModalOpen(false);
+            formik.resetForm();
+          }}
+          className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={formik.isSubmitting}
+          className="flex-1 px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
+        >
+          {formik.isSubmitting ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Adding...
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Report Category
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  Manage Report Categories
+                </h1>
+              </div>
+              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Category
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {reportCategoriesError ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Something went wrong
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Error loading report categories. Please try again later.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Try Again
+              </button>
+            </div>
+          ) : (
+            renderReportCategoriesList(
+              reportCategories,
+              reportCategoriesLoading
+            )
+          )}
+        </div>
+
+        {/* Add Report Category Modal */}
+        <Modal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            formik.resetForm();
+          }}
+          title="Add New Report Category"
+          buttonText="Close"
+        >
+          {mutation.isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center">
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span className="text-indigo-600 font-medium">
+                  Adding report category...
+                </span>
+              </div>
+            </div>
+          ) : (
+            renderAddForm()
+          )}
+        </Modal>
+
+        {/* Success/Error Modal */}
+        <Modal
+          isOpen={mutation.isError || (!mutation.isLoading && !!modalMessage)}
+          onClose={() => {
+            setModalMessage("");
+            setIsError(false);
+          }}
+          title={isError ? "Error" : "Success"}
+          buttonText="Close"
+        >
+          <div className="text-center py-4">
+            <div
+              className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                isError ? "bg-red-100" : "bg-green-100"
+              }`}
+            >
+              {isError ? (
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-8 h-8 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </div>
+            <p
+              className={`text-lg font-medium ${
+                isError ? "text-red-600" : "text-green-600"
+              }`}
+            >
+              {modalMessage}
+            </p>
+          </div>
+        </Modal>
+      </div>
+    </div>
   );
 };
 

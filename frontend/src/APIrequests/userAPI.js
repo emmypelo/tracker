@@ -1,8 +1,9 @@
 /* eslint-disable no-useless-catch */
 import axios from "axios";
 
-// name, username, email, password, passMatch
-const baseUrl = "https://tracker-8g9y.onrender.com/api/users";
+import { backendURL } from "../utils/backendURL.js";
+
+const baseUrl = `${backendURL}/api/users`;
 // ? create User API
 export const registerUserApi = async (userData) => {
   const { data } = await axios.post(`${baseUrl}/register`, userData, {
@@ -58,6 +59,7 @@ export const checkAuthApi = async () => {
   const { data } = await axios.get(`${baseUrl}/checkauth`, {
     withCredentials: true,
   });
+
   return data;
 };
 
@@ -144,4 +146,14 @@ export const resetPasswordApi = async (data) => {
   );
 
   return response.data;
+};
+export const changePasswordApi = async (userId, passwords) => {
+  const { data } = await axios.put(
+    `${baseUrl}/${userId}/change-password`,
+    passwords,
+    {
+      withCredentials: true,
+    }
+  );
+  return data;
 };

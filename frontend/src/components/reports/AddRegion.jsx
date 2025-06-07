@@ -1,37 +1,55 @@
+"use client";
+
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { addRegionApi } from "../../APIrequests/regionAPI";
+import { fetchRegionsApi, addRegionApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
-import { useSelector } from "react-redux";
 
 const AddRegion = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { userAuth } = useSelector((state) => state.auth);
   const isAuthenticated = userAuth?.data?.isAuthenticated === true;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  // Fetch regions
+  const {
+    data: regionsData,
+    error: regionsError,
+    isLoading: regionsLoading,
+  } = useQuery({
+    queryKey: ["regions"],
+    queryFn: fetchRegionsApi,
+  });
+
+  const regions = regionsData?.data?.regions || [];
+
+  // Mutation for adding region
   const mutation = useMutation({
     mutationKey: ["add-region"],
     mutationFn: (values) => addRegionApi(values),
     onSuccess: () => {
+      queryClient.invalidateQueries(["regions"]);
       setModalMessage("Region added successfully.");
       setIsError(false);
-      setIsModalOpen(true);
+      setIsAddModalOpen(false);
+      formik.resetForm();
     },
     onError: (error) => {
       setModalMessage(error.response?.data?.message || "An error occurred.");
       setIsError(true);
-      setIsModalOpen(true);
     },
   });
 
+  // Formik setup for adding region
   const formik = useFormik({
     initialValues: {
       title: "",
@@ -52,135 +70,486 @@ const AddRegion = () => {
     },
   });
 
+  // Render error for form fields
   const renderError = (field) =>
     formik.touched[field] &&
     formik.errors[field] && (
-      <p className="mt-1 text-sm text-red-500 absolute top-0 right-4">
+      <div className="mt-2 flex items-center text-red-500 text-sm">
+        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
         {formik.errors[field]}
-      </p>
+      </div>
     );
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    if (!isError) {
-      formik.resetForm();
-      navigate("/manage");
+  // Loading skeleton component
+  const LoadingSkeleton = () => (
+    <div className="animate-pulse space-y-4 p-6">
+      {[...Array(5)].map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center justify-between p-4 bg-gray-100 rounded-lg"
+        >
+          <div className="flex-1">
+            <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div className="h-6 bg-gray-300 rounded-full w-16"></div>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Render list of regions
+  const renderRegionsList = (items, isLoading) => {
+    if (isLoading) {
+      return <LoadingSkeleton />;
     }
-  }
+
+    return (
+      <div className="p-6">
+        {items.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-12 h-12 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No regions yet
+            </h3>
+            <p className="text-gray-500 mb-6">
+              Get started by creating your first region.
+            </p>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Region
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {items.map((item, index) => (
+              <div
+                key={item._id}
+                className="group bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <Link
+                  to={`/manage/regions/${item._id}`}
+                  className=" items-center justify-between p-6 block"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center mb-2">
+                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                        <svg
+                          className="w-5 h-5 text-white"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200">
+                          {item.title}
+                        </h3>
+                        <div className="flex items-center space-x-4 mt-1"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
+                      <span className="text-sm font-medium text-gray-600">
+                        {item.stations?.length || 0} Stations
+                      </span>
+                    </div>
+                    <svg
+                      className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render add form
+  const renderAddForm = () => (
+    <form className="p-6 space-y-6" onSubmit={formik.handleSubmit}>
+      <div>
+        <label
+          htmlFor="title"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Region Title
+        </label>
+        <input
+          type="text"
+          name="title"
+          id="title"
+          {...formik.getFieldProps("title")}
+          placeholder="Enter region title"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+            formik.errors.title && formik.touched.title
+              ? "border-red-300 bg-red-50"
+              : "border-gray-300 bg-white"
+          }`}
+        />
+        {renderError("title")}
+      </div>
+
+      <div>
+        <label
+          htmlFor="rss"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          RSS 
+        </label>
+        <input
+          type="text"
+          name="rss"
+          id="rss"
+          {...formik.getFieldProps("rss")}
+          placeholder="Enter RSS name"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+            formik.errors.rss && formik.touched.rss
+              ? "border-red-300 bg-red-50"
+              : "border-gray-300 bg-white"
+          }`}
+        />
+        {renderError("rss")}
+      </div>
+
+      <div>
+        <label
+          htmlFor="supervisor"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Supervisor 
+        </label>
+        <input
+          type="text"
+          name="supervisor"
+          id="supervisor"
+          {...formik.getFieldProps("supervisor")}
+          placeholder="Enter supervisor name"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+            formik.errors.supervisor && formik.touched.supervisor
+              ? "border-red-300 bg-red-50"
+              : "border-gray-300 bg-white"
+          }`}
+        />
+        {renderError("supervisor")}
+      </div>
+
+      <div className="flex space-x-3 pt-4">
+        <button
+          type="button"
+          onClick={() => {
+            setIsAddModalOpen(false);
+            formik.resetForm();
+          }}
+          className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={formik.isSubmitting}
+          className="flex-1 px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
+        >
+          {formik.isSubmitting ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Adding...
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-4 h-4 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Region
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
-    <section className="flex items-center justify-center md:w-3/5 w-full mx-auto mt-3">
-      <div className="w-full space-y-8 rounded-lg shadow-xl bg-gray-800">
-        {mutation.isLoading && (
-          <div className="absolute top-5 w-full text-center">
-            <h2 className="text-lg font-semibold text-blue-600">
-              Adding region...
-            </h2>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                <h1 className="text-2xl font-bold text-white">
+                  Manage Regions
+                </h1>
+              </div>
+              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm"
+                >
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Region
+                </button>
+              </div>
+            </div>
           </div>
-        )}
-        {mutation.isError && (
-          <div className="absolute top-5 w-full text-center">
-            <h2 className="text-lg font-semibold text-red-500">
-              {mutation.error?.response?.data?.message ||
-                mutation.error?.message}
-            </h2>
-          </div>
-        )}
+        </div>
 
-        <h2 className="text-2xl font-bold text-white bg-slate-900 rounded-t-lg py-2">
-          Add Region
-        </h2>
-        <form className="mt-8 p-4 space-y-6" onSubmit={formik.handleSubmit}>
-          <div className="relative">
-            <label
-              htmlFor="title"
-              className="text-left block mb-2 text-sm font-medium text-white"
-            >
-              Region Title
-            </label>
-            {renderError("title")}
-            <input
-              type="text"
-              name="title"
-              id="title"
-              {...formik.getFieldProps("title")}
-              placeholder="Enter region title"
-              className={`bg-gray-50 border ${
-                formik.errors.title && formik.touched.title
-                  ? "border-red-500"
-                  : "border-gray-300"
-              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white`}
-            />
-          </div>
+        {/* Content */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+          {regionsError ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Something went wrong
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Error loading regions. Please try again later.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Try Again
+              </button>
+            </div>
+          ) : (
+            renderRegionsList(regions, regionsLoading)
+          )}
+        </div>
 
-          <div className="relative">
-            <label
-              htmlFor="rss"
-              className="text-left block mb-2 text-sm font-medium text-white"
-            >
-              RSS
-            </label>
-            {renderError("rss")}
-            <input
-              type="text"
-              name="rss"
-              id="rss"
-              {...formik.getFieldProps("rss")}
-              placeholder="Enter RSS "
-              className={`bg-gray-50 border ${
-                formik.errors.rss && formik.touched.rss
-                  ? "border-red-500"
-                  : "border-gray-300"
-              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white`}
-            />
-          </div>
-
-          <div className="relative">
-            <label
-              htmlFor="supervisor"
-              className="text-left block mb-2 text-sm font-medium text-white"
-            >
-              Supervisor
-            </label>
-            {renderError("supervisor")}
-            <input
-              type="text"
-              name="supervisor"
-              id="supervisor"
-              {...formik.getFieldProps("supervisor")}
-              placeholder="Enter supervisor name"
-              className={`bg-gray-50 border ${
-                formik.errors.supervisor && formik.touched.supervisor
-                  ? "border-red-500"
-                  : "border-gray-300"
-              } text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 bg-gray-700 border-gray-600 placeholder-gray-400 text-white`}
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg focus:ring-4 bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
-            disabled={formik.isSubmitting}
-          >
-            {formik.isSubmitting ? "Adding..." : "Add Region"}
-          </button>
-        </form>
-      </div>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        title={isError ? "Error" : "Success"}
-        buttonText="Close"
-      >
-        <p
-          className={`text-center ${
-            isError ? "text-red-600" : "text-green-600"
-          }`}
+        {/* Add Region Modal */}
+        <Modal 
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            formik.resetForm();
+          }}
+          title="Add New Region"
+          buttonText="Close"
         >
-          {modalMessage}
-        </p>
-      </Modal>
-    </section>
+          {mutation.isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center">
+                <svg
+                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span className="text-indigo-600 font-medium">
+                  Adding region...
+                </span>
+              </div>
+            </div>
+          ) : (
+            renderAddForm()
+          )}
+        </Modal>
+
+        {/* Success/Error Modal */}
+        <Modal
+          isOpen={mutation.isError || (!mutation.isLoading && !!modalMessage)}
+          onClose={() => {
+            setModalMessage("");
+            setIsError(false);
+          }}
+          title={isError ? "Error" : "Success"}
+          buttonText="Close"
+        >
+          <div className="text-center py-4">
+            <div
+              className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                isError ? "bg-red-100" : "bg-green-100"
+              }`}
+            >
+              {isError ? (
+                <svg
+                  className="w-8 h-8 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-8 h-8 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </div>
+            <p
+              className={`text-lg font-medium ${
+                isError ? "text-red-600" : "text-green-600"
+              }`}
+            >
+              {modalMessage}
+            </p>
+          </div>
+        </Modal>
+      </div>
+    </div>
   );
 };
 

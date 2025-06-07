@@ -1,4 +1,5 @@
 /* eslint-disable react/prop-types */
+import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
@@ -7,7 +8,7 @@ import { registerUserApi, checkUserApi } from "../../APIrequests/userAPI";
 
 const InputField = ({
   label,
-  type,
+  type = "text",
   name,
   id,
   placeholder,
@@ -16,6 +17,7 @@ const InputField = ({
   onBlur,
   error,
   touched,
+  ...props
 }) => (
   <div className="relative">
     <label htmlFor={id} className="form-label">
@@ -33,6 +35,7 @@ const InputField = ({
         error && touched ? "border-red-500" : "border-gray-300"
       }`}
       required
+      {...props}
     />
     {error && touched && (
       <p className="absolute -top-1 right-1 text-red-500 text-sm mt-1">
@@ -42,22 +45,25 @@ const InputField = ({
   </div>
 );
 
+const initialValues = {
+  firstname: "",
+  lastname: "",
+  email: "",
+  password: "12345678",
+  passmatch: "12345678",
+};
+
 const SignUp = () => {
   const navigate = useNavigate();
+  const [submitError, setSubmitError] = React.useState(null);
 
-  const registerUserMutation = useMutation({
+  const { mutateAsync: registerUser } = useMutation({
     mutationKey: ["registerUser"],
     mutationFn: registerUserApi,
   });
 
   const formik = useFormik({
-    initialValues: {
-      firstname: "",
-      lastname: "",
-      email: "",
-      password: "12345678",
-      passmatch: "12345678",
-    },
+    initialValues,
     validationSchema: Yup.object({
       firstname: Yup.string().required("First Name is required"),
       lastname: Yup.string().required("Last Name is required"),
@@ -65,11 +71,12 @@ const SignUp = () => {
         .email("Invalid email format")
         .required("Email is required")
         .test("email-exists", "Email already exists", async (value) => {
+          if (!value) return true;
           try {
             const response = await checkUserApi(value);
-            return !response.userExists; // Return true if the user doesn't exist
+            return !response.userExists;
           } catch (error) {
-            return false; // Treat any error as if the email exists (to be safe)
+            return false;
           }
         }),
       password: Yup.string()
@@ -80,45 +87,55 @@ const SignUp = () => {
         .oneOf([Yup.ref("password")], "Passwords must match"),
     }),
     onSubmit: async (values) => {
+      setSubmitError(null);
       try {
-        await registerUserMutation.mutateAsync(values);
-        navigate("/");
-      } catch (error) {}
+        await registerUser(values);
+        navigate("/signin");
+      } catch (error) {
+        if (error.response?.data?.message === "User already exists") {
+          setSubmitError("This email is already registered");
+          formik.setFieldError("email", "Email already exists");
+        } else {
+          setSubmitError("Registration failed. Please try again.");
+        }
+      }
     },
   });
 
+  const getFieldProps = (name) => ({
+    value: formik.values[name],
+    onChange: formik.handleChange,
+    onBlur: formik.handleBlur,
+    error: formik.errors[name],
+    touched: formik.touched[name],
+  });
+
   return (
-    <section className="">
-      <div className="w-full p-6 space-y-8 sm:p-8  rounded-lg shadow-xl ">
-        <h2 className=" text-2xl font-bold text-gray-900">
+    <section>
+      <div className="w-full p-6 space-y-8 sm:p-8 rounded-lg shadow-xl">
+        <h2 className="text-2xl font-bold text-gray-900">
           Sign up to Maintenance Tracker
         </h2>
         <form className="mt-8 space-y-6" onSubmit={formik.handleSubmit}>
-          <div className=" grid grid-cols-1 md:grid-cols-2 gap-4">
+          {submitError && (
+            <div className="text-red-500 text-sm p-2 bg-red-50 rounded">
+              {submitError}
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField
               label="First Name"
-              type="text"
               name="firstname"
               id="firstname"
               placeholder="Enter your first name"
-              value={formik.values.firstname}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.errors.firstname}
-              touched={formik.touched.firstname}
-              {...formik.getFieldProps("firstname")}
+              {...getFieldProps("firstname")}
             />
             <InputField
               label="Last Name"
-              type="text"
               name="lastname"
               id="lastname"
               placeholder="Enter your last name"
-              value={formik.values.lastname}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.errors.lastname}
-              touched={formik.touched.lastname}
+              {...getFieldProps("lastname")}
             />
           </div>
 
@@ -128,11 +145,7 @@ const SignUp = () => {
             name="email"
             id="email"
             placeholder="name@company.com"
-            value={formik.values.email}
-            onChange={formik.handleChange}
-            onBlur={formik.handleBlur}
-            error={formik.errors.email}
-            touched={formik.touched.email}
+            {...getFieldProps("email")}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -142,11 +155,7 @@ const SignUp = () => {
               name="password"
               id="password"
               placeholder="••••••••"
-              value={formik.values.password}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.errors.password}
-              touched={formik.touched.password}
+              {...getFieldProps("password")}
             />
             <InputField
               label="Confirm Password"
@@ -154,23 +163,20 @@ const SignUp = () => {
               name="passmatch"
               id="passmatch"
               placeholder="••••••••"
-              value={formik.values.passmatch}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.errors.passmatch}
-              touched={formik.touched.passmatch}
+              {...getFieldProps("passmatch")}
             />
           </div>
 
           <button
             type="submit"
-            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg  focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+            className="w-full px-5 py-3 text-base font-medium text-center text-white rounded-lg focus:ring-4 sm:w-auto bg-blue-600 hover:bg-blue-700 focus:ring-blue-800"
+            disabled={formik.isSubmitting}
           >
-            Register
+            {formik.isSubmitting ? "Registering..." : "Register"}
           </button>
-          <div className="text-sm font-medium text-gray-900 ">
+          <div className="text-sm font-medium text-gray-900">
             Already Registered?{" "}
-            <Link to="/signin" className=" hover:underline text-blue-500">
+            <Link to="/signin" className="hover:underline text-blue-500">
               Sign In
             </Link>
           </div>

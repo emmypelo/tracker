@@ -2,20 +2,17 @@ import { createTransport } from "nodemailer";
 
 const sendPasswordMail = async (to, token) => {
   try {
-    console.log("Attempting to send email to:", to);
-
     // 1. Create transporter with better configuration
     const transporter = createTransport({
-      service: "gmail", 
+      service: "gmail",
       auth: {
         user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_PASS, 
+        pass: process.env.GMAIL_PASS,
       },
     });
 
     // 2. Verify transporter configuration
     await transporter.verify();
-    console.log("SMTP connection verified successfully");
 
     // 3. Create the message
     const message = {
@@ -62,7 +59,6 @@ const sendPasswordMail = async (to, token) => {
 
     // 4. Send the email
     const info = await transporter.sendMail(message);
-    console.log("Email sent successfully:", info.messageId);
 
     return info;
   } catch (error) {

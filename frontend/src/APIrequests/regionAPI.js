@@ -1,6 +1,7 @@
 import axios from "axios";
+import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = "https://tracker-8g9y.onrender.com/api/regions";
+const baseUrl = `${backendURL}/api/regions`;
 // ? create region API
 export const addRegionApi = async (regionData) => {
   const { data } = await axios.post(`${baseUrl}/create`, regionData, {

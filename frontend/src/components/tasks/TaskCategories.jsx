@@ -202,7 +202,7 @@ const TaskCategories = () => {
               >
                 <Link
                   to={`/manage/${activeView}/${item._id}`}
-                  className="flex items-center justify-between p-6 block"
+                  className=" items-center justify-between p-6 block"
                 >
                   <div className="flex-1">
                     <div className="flex items-center mb-2">
@@ -237,7 +237,6 @@ const TaskCategories = () => {
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                      
                       <span className="text-sm font-medium text-gray-600">
                         {item.tasks?.length || 0} tasks
                       </span>
@@ -386,9 +385,8 @@ const TaskCategories = () => {
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
               <div>
-                
                 <p className="text-indigo-100 capitalize text-left">
-                 {" "}
+                  {" "}
                   {activeView === "categories" ? "categories" : "subcategories"}
                 </p>
               </div>
@@ -432,7 +430,7 @@ const TaskCategories = () => {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                   New
+                  New
                 </button>
               </div>
             </div>
@@ -538,7 +536,7 @@ const TaskCategories = () => {
         </Modal>
 
         <Modal
-          isOpen={mutation.isError || (!mutation.isLoading && modalMessage)}
+          isOpen={mutation.isError || (!mutation.isLoading && !!modalMessage)}
           onClose={() => {
             setModalMessage("");
             setIsError(false);

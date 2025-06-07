@@ -11,7 +11,7 @@ import {
 import { FiEdit } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Modal from "../../common/Modal";
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
@@ -30,9 +30,7 @@ const AllUsers = () => {
   const [isError, setIsError] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
-  const [filters, setFilters] = useState({
-    name: "",
-  });
+  const [filters, setFilters] = useState({ name: "" });
   const [searchTerm, setSearchTerm] = useState("");
 
   const debouncedFetchUsers = useCallback(
@@ -49,10 +47,11 @@ const AllUsers = () => {
   };
 
   const {
+    isLoading,
     isError: isUsersError,
     data: usersData,
     error: usersError,
-    refetch: userRefetch,
+    refetch: refetchUsers,
   } = useQuery({
     queryKey: ["fetchUsers", filters],
     queryFn: () => fetchAllUsersApi(filters),
@@ -68,6 +67,32 @@ const AllUsers = () => {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationKey: ["deleteUser"],
+    mutationFn: deleteUserApi,
+    onSuccess: () => {
+      setIsError(false);
+      setModalMessage("User deleted successfully");
+      setIsModalOpen(true);
+      refetchUsers();
+    },
+    onError: (error) => {
+      setIsError(true);
+      let errorMessage = "Deleting failed";
+
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        navigate("/signin", { state: { from: location } });
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
+    },
+  });
+
   const handleDelete = async (userId) => {
     if (!isAuthenticated) {
       navigate("/signin", { state: { from: location } });
@@ -79,7 +104,6 @@ const AllUsers = () => {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-
     try {
       await deleteMutation.mutateAsync(userToDelete);
       setIsError(false);
@@ -107,32 +131,6 @@ const AllUsers = () => {
     setIsModalOpen(false);
     setUserToDelete(null);
   };
-
-  const deleteMutation = useMutation({
-    mutationKey: ["deleteUser"],
-    mutationFn: deleteUserApi,
-    onSuccess: () => {
-      setIsError(false);
-      setModalMessage("User deleted successfully");
-      setIsModalOpen(true);
-      userRefetch();
-    },
-    onError: (error) => {
-      setIsError(true);
-      let errorMessage = "Deleting failed";
-
-      if (error.response?.status === 401 || error.message.includes("401")) {
-        navigate("/signin", { state: { from: location } });
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-
-      setModalMessage(errorMessage);
-      setIsModalOpen(true);
-    },
-  });
 
   const [editValues, setEditValues] = useState({
     firstname: "",
@@ -216,34 +214,54 @@ const AllUsers = () => {
 
   const clearFilters = () => {
     setSearchTerm("");
-    const clearedFilters = {
-      name: "",
-    };
+    const clearedFilters = { name: "" };
     setFilters(clearedFilters);
     debouncedFetchUsers(clearedFilters);
   };
 
-  if (isUsersError)
-    return <h2>Error: {usersError?.message || "Something went wrong"}</h2>;
-
   const users = usersData?.data?.users || [];
   const roles = ["admin", "user"];
+
+  const renderSkeletonRows = (count = 5) => {
+    return Array.from({ length: count }).map((_, index) => (
+      <tr key={index} className="animate-pulse">
+        <td className="border px-1 py-2">
+          <div className="h-4 bg-gray-200 rounded w-6 mx-auto" />
+        </td>
+        <td className="border px-4 py-2">
+          <div className="h-4 bg-gray-200 rounded" />
+        </td>
+        <td className="border px-4 py-2">
+          <div className="h-4 bg-gray-200 rounded" />
+        </td>
+        <td className="border px-4 py-2">
+          <div className="h-4 bg-gray-200 rounded w-3/4" />
+        </td>
+        <td className="border px-4 py-2">
+          <div className="flex gap-2 justify-center">
+            <div className="h-6 w-6 bg-gray-200 rounded-full" />
+            <div className="h-6 w-6 bg-gray-200 rounded-full" />
+          </div>
+        </td>
+      </tr>
+    ));
+  };
+
+  if (isUsersError)
+    return (
+      <h2 className="text-red-600 text-center py-4">
+        Error: {usersError?.message || "Something went wrong"}
+      </h2>
+    );
 
   return (
     <div className="relative px-1">
       <div className="sticky top-[4.6rem] left-0 right-0 bg-white shadow-md z-30">
         <div className="flex justify-between items-center w-full h-16 px-4 bg-gray-800 text-white">
-          <h1 className="text-l font-bold">Users </h1>
-          <Link
-            to="/newuser"
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition duration-300 ease-in-out"
-          >
-            New User
-          </Link>
+          <h1 className="text-l font-bold">Users</h1>
         </div>
       </div>
 
-      {/* Responsive Single-row Filters */}
       <div className="sticky top-[4.6rem] z-20 bg-gray-100 h-16 border-b border-gray-200">
         <form
           onSubmit={handleSearchSubmit}
@@ -278,22 +296,28 @@ const AllUsers = () => {
         </form>
       </div>
 
-      {users.length === 0 ? (
-        <div>No users found</div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border border-gray-300 bg-white">
-            <thead>
-              <tr className="sticky top-[rem] bg-gray-200 text-sm">
-                <th className="border p-1 w-[5%]">S/N</th>
-                <th className="border p-1">First Name</th>
-                <th className="border p-1">Last Name</th>
-                <th className="border p-1">Role</th>
-                <th className="border p-1">Actions</th>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse border border-gray-300 bg-white">
+          <thead>
+            <tr className="sticky top-[rem] bg-gray-200 text-sm">
+              <th className="border p-1 w-[5%]">S/N</th>
+              <th className="border p-1">First Name</th>
+              <th className="border p-1">Last Name</th>
+              <th className="border p-1">Role</th>
+              <th className="border p-1">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading ? (
+              renderSkeletonRows()
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-4">
+                  No users found
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {users.map((user, index) => (
+            ) : (
+              users.map((user, index) => (
                 <tr
                   key={user._id}
                   className={`hover:bg-gray-100 text-sm md:text-base h-12 ${
@@ -382,11 +406,11 @@ const AllUsers = () => {
                     )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <Modal
         isOpen={isModalOpen}

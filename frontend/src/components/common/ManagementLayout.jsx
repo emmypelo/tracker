@@ -8,9 +8,7 @@ import {
   ChevronLast,
   ChevronFirst,
   Home,
-
   Globe,
-
   UserCog,
   BookUser,
   HousePlug,
@@ -134,7 +132,7 @@ const ManagementLayout = () => {
   const regions = regionsData?.data.regions || [];
   const reports = reportsData?.data.reports || [];
   const isOverview = location.pathname === "/manage";
-  console.log(regions);
+
   const navItems = [
     { to: "/manage", text: "Overview", icon: <Home size={20} />, end: true },
 

@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const baseUrl = "https://tracker-8g9y.onrender.com/api/tasks";
+import { backendURL } from "../utils/backendURL.js";
+
+const baseUrl = `${backendURL}/api/tasks`;
 // ? create Task API
 export const createTaskApi = async (postData) => {
   const { data } = await axios.post(`${baseUrl}/create`, postData, {

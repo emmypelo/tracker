@@ -81,8 +81,6 @@ const ReportDistributionChart = () => {
 
   const categories = categoryData?.data.categories || [];
 
-  console.log("Categories Data:", categories);
-
   // Transform API data to match Recharts format
   const transformedData = categories.map((category) => ({
     title: category.title,

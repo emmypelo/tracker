@@ -23,11 +23,9 @@ const safeObjectId = (id) => {
       return id.toString();
     }
 
-    // If we have a string that's not in ObjectId format, log an error
-    console.error("Invalid ObjectId format:", id);
+    // If we have a string that's not in ObjectId format, return null
     return null;
   } catch (error) {
-    console.error("Error converting ID:", error);
     return null;
   }
 };
@@ -67,7 +65,8 @@ const userController = {
     }
 
     try {
-      const userExist = await User.findOne({ email });
+      const lowerCaseEmail = email.toLowerCase();
+      const userExist = await User.findOne({ email: lowerCaseEmail });
       const message = userExist ? "User exists" : "User does not exist";
       return sendResponse(res, 200, "success", message, {
         userExists: Boolean(userExist),
@@ -115,8 +114,11 @@ const userController = {
     }
 
     try {
+      // Convert email to lowercase
+      const lowerCaseEmail = email.toLowerCase();
+
       // Check if user already exists
-      const userExist = await User.findOne({ email });
+      const userExist = await User.findOne({ email: lowerCaseEmail });
       if (userExist) {
         return sendResponse(res, 400, "error", "User already exists");
       }
@@ -129,7 +131,7 @@ const userController = {
       const newUser = await User.create({
         firstname,
         lastname,
-        email,
+        email: lowerCaseEmail,
         password: hashedPassword,
       });
 
@@ -175,8 +177,11 @@ const userController = {
     }
 
     try {
+      // Convert email to lowercase
+      const lowerCaseEmail = email.toLowerCase();
+
       // Find user by email
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email: lowerCaseEmail });
       if (!user) {
         return sendResponse(res, 401, "error", "Invalid email or password");
       }
@@ -200,7 +205,7 @@ const userController = {
         email: user.email,
         _id: user._id,
         role: user.role || "user",
-        token: process.env.NODE_ENV === "development" ? token : undefined, // Only include token in development
+        token: process.env.NODE_ENV === "development" ? token : undefined,
       });
     } catch (error) {
       return sendResponse(
@@ -234,7 +239,7 @@ const userController = {
       }
 
       if (email) {
-        filter.email = { $regex: email, $options: "i" };
+        filter.email = { $regex: email.toLowerCase(), $options: "i" };
       }
 
       if (role) {
@@ -306,16 +311,8 @@ const userController = {
 
   // Check authentication status
   checkAuthentication: asyncHandler(async (req, res) => {
-    // Get token from cookie or Authorization header
-    let token = req.cookies?.TrackIt;
-
-    // If no cookie, check Authorization header
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
-      }
-    }
+    // Get token from cookie only
+    const token = req.cookies?.TrackIt;
 
     if (!token) {
       return sendResponse(res, 401, "error", "User is not authenticated", {
@@ -324,33 +321,55 @@ const userController = {
     }
 
     try {
+      // Verify the JWT token
       const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Safely convert the ID to a valid ObjectId string
-      const userId = safeObjectId(decodedUser.id);
-      if (!userId) {
-        return sendResponse(res, 401, "error", "Invalid user ID", {
+      // CRITICAL FIX: Extract the user ID and validate it properly
+      const userIdFromToken = decodedUser.id;
+
+      // Validate that we have a user ID
+      if (!userIdFromToken) {
+        res.cookie("TrackIt", "", { maxAge: 1 });
+        return sendResponse(
+          res,
+          401,
+          "error",
+          "Invalid token: missing user ID",
+          {
+            isAuthenticated: false,
+          }
+        );
+      }
+
+      // Convert to string and validate ObjectId format
+      const userIdString = String(userIdFromToken);
+
+      // Validate ObjectId format
+      if (!mongoose.Types.ObjectId.isValid(userIdString)) {
+        res.cookie("TrackIt", "", { maxAge: 1 });
+        return sendResponse(res, 401, "error", "Invalid user ID format", {
           isAuthenticated: false,
         });
       }
 
-      const user = await User.findById(userId).select(
+      // CRITICAL: Use the validated userIdString, NOT any other variable
+      const user = await User.findById(userIdString).select(
         "-password -authMethod -passwordResetToken -passwordResetExpires"
       );
 
       if (!user) {
+        res.cookie("TrackIt", "", { maxAge: 1 });
         return sendResponse(res, 401, "error", "User not found", {
           isAuthenticated: false,
         });
       }
 
-      // Refresh token if it's close to expiry (optional)
+      // Refresh token if it's close to expiry
       const tokenExp = new Date(decodedUser.exp * 1000);
       const now = new Date();
       const oneDay = 24 * 60 * 60 * 1000;
 
       if (tokenExp.getTime() - now.getTime() < oneDay) {
-        // Token expires in less than a day, refresh it
         const newToken = generateToken(user);
         res.cookie("TrackIt", newToken, getCookieOptions());
       }
@@ -366,6 +385,17 @@ const userController = {
     } catch (error) {
       // Clear invalid token
       res.cookie("TrackIt", "", { maxAge: 1 });
+
+      // Handle specific JWT errors
+      if (error.name === "JsonWebTokenError") {
+        return sendResponse(res, 401, "error", "Invalid authentication token", {
+          isAuthenticated: false,
+        });
+      } else if (error.name === "TokenExpiredError") {
+        return sendResponse(res, 401, "error", "Authentication token expired", {
+          isAuthenticated: false,
+        });
+      }
 
       return sendResponse(
         res,
@@ -399,8 +429,11 @@ const userController = {
     }
 
     try {
+      // Convert email to lowercase
+      const lowerCaseEmail = email.toLowerCase();
+
       // Find the user
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email: lowerCaseEmail });
       if (!user) {
         // For security reasons, don't reveal if user exists or not
         return sendResponse(
@@ -427,8 +460,6 @@ const userController = {
         `If a user with that email exists, a password reset link has been sent`
       );
     } catch (error) {
-      console.error("Forgot password error:", error);
-
       // More specific error handling
       if (error.message.includes("Gmail authentication")) {
         return sendResponse(
@@ -636,11 +667,15 @@ const userController = {
 
       // Only allow email change if it's not already taken
       if (email && email !== userToEdit.email) {
-        const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+        const lowerCaseEmail = email.toLowerCase();
+        const emailExists = await User.findOne({
+          email: lowerCaseEmail,
+          _id: { $ne: userId },
+        });
         if (emailExists) {
           return sendResponse(res, 400, "error", "Email is already in use");
         }
-        updateData.email = email;
+        updateData.email = lowerCaseEmail; // Use lowercase email
       }
 
       // Update the user
@@ -710,11 +745,15 @@ const userController = {
 
       // Only allow email change if it's not already taken
       if (email && email !== userToEdit.email) {
-        const emailExists = await User.findOne({ email, _id: { $ne: userId } });
+        const lowerCaseEmail = email.toLowerCase();
+        const emailExists = await User.findOne({
+          email: lowerCaseEmail,
+          _id: { $ne: userId },
+        });
         if (emailExists) {
           return sendResponse(res, 400, "error", "Email is already in use");
         }
-        updateData.email = email;
+        updateData.email = lowerCaseEmail; // Use lowercase email
       }
 
       // Only admins can change roles
@@ -853,65 +892,7 @@ const userController = {
     }
   }),
 
-  // Middleware for protecting routes
-  protect: asyncHandler(async (req, res, next) => {
-    // Get token from cookie or Authorization header
-    let token = req.cookies?.TrackIt;
 
-    // If no cookie, check Authorization header
-    if (!token) {
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
-      }
-    }
-
-    if (!token) {
-      return sendResponse(res, 401, "error", "Not authorized, no token");
-    }
-
-    try {
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get user from the token
-      const userId = safeObjectId(decoded.id);
-      if (!userId) {
-        return sendResponse(res, 401, "error", "Invalid user ID");
-      }
-
-      req.user = await User.findById(userId).select("-password");
-      if (!req.user) {
-        return sendResponse(res, 401, "error", "User not found");
-      }
-
-      next();
-    } catch (error) {
-      console.error("Auth middleware error:", error);
-
-      // Clear invalid token
-      res.cookie("TrackIt", "", { maxAge: 1 });
-
-      if (error.name === "JsonWebTokenError") {
-        return sendResponse(res, 401, "error", "Invalid token");
-      }
-
-      if (error.name === "TokenExpiredError") {
-        return sendResponse(res, 401, "error", "Token expired");
-      }
-
-      return sendResponse(res, 401, "error", "Not authorized");
-    }
-  }),
-
-  // Middleware to restrict to admin only
-  admin: (req, res, next) => {
-    if (req.user && req.user.role === "admin") {
-      next();
-    } else {
-      return sendResponse(res, 403, "error", "Not authorized as an admin");
-    }
-  },
 };
 
 export default userController;

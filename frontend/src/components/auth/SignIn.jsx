@@ -1,12 +1,12 @@
 /* eslint-disable react/prop-types */
-
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useMutation } from "@tanstack/react-query";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { loginUserApi } from "../../APIrequests/userAPI";
 import { login } from "../../redux/slices/authSlices";
+import { useEffect } from "react";
 
 const InputField = ({
   label,
@@ -49,11 +49,19 @@ const SignIn = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useSelector((state) => state.auth);
 
   const loginUserMutation = useMutation({
     mutationKey: ["loginUser"],
     mutationFn: loginUserApi,
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(location.state?.from || "/", { replace: true });
+    }
+  }, [isAuthenticated, navigate, location.state]);
 
   const formik = useFormik({
     initialValues: {
@@ -70,11 +78,7 @@ const SignIn = () => {
       try {
         const data = await loginUserMutation.mutateAsync(values);
         dispatch(login(data));
-        if (location.state?.from) {
-          navigate(location.state.from);
-        } else {
-          navigate("/");
-        }
+        navigate(location.state?.from || "/", { replace: true });
       } catch (error) {
         console.error;
       } finally {
@@ -82,6 +86,11 @@ const SignIn = () => {
       }
     },
   });
+
+  // Don't render login page if authenticated
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <section className="">
