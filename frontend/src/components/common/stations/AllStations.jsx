@@ -1,6 +1,5 @@
-"use client";
-
-import { useState, useCallback } from "react";
+import { useMemo } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFormik } from "formik";
@@ -14,10 +13,10 @@ import {
 } from "../../../APIrequests/stationsAPI";
 import Modal from "../../common/Modal";
 import { useSelector } from "react-redux";
-import { FiEdit, FiPlus } from "react-icons/fi";
+import { FiEdit, FiPlus, FiMapPin } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
-import { Search, X } from "lucide-react";
+import { Search, X, Phone, User } from "lucide-react";
 import debounce from "lodash/debounce";
 
 const StationManagement = () => {
@@ -37,7 +36,7 @@ const StationManagement = () => {
   const [stationToDelete, setStationToDelete] = useState(null);
 
   // Edit states
-  const [editingRowId, setEditingRowId] = useState(null);
+  const [editingStationId, setEditingStationId] = useState(null);
   const [editValues, setEditValues] = useState({
     name: "",
     managerName: "",
@@ -52,11 +51,16 @@ const StationManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Debounced search
-  const debouncedFetchStations = useCallback(
-    debounce((newFilters) => {
-      queryClient.invalidateQueries(["fetchStations", newFilters]);
-    }, 300),
-    []
+
+  // ...other imports
+
+  // Debounced search
+  const debouncedFetchStations = useMemo(
+    () =>
+      debounce((newFilters) => {
+        queryClient.invalidateQueries(["fetchStations", newFilters]);
+      }, 300),
+    [queryClient]
   );
 
   // Queries
@@ -98,7 +102,7 @@ const StationManagement = () => {
     mutationKey: ["updateStation"],
     mutationFn: updateStationApi,
     onSuccess: () => {
-      setEditingRowId(null);
+      setEditingStationId(null);
       queryClient.invalidateQueries(["fetchStations", filters]);
       setModalMessage("Station updated successfully");
       setIsError(false);
@@ -170,9 +174,7 @@ const StationManagement = () => {
   const renderError = (field) =>
     formik.touched[field] &&
     formik.errors[field] && (
-      <p className="mt-1 text-sm text-red-500 absolute top-0 right-4">
-        {formik.errors[field]}
-      </p>
+      <p className="mt-1 text-sm text-red-500">{formik.errors[field]}</p>
     );
 
   const handleFilterChange = (key, value) => {
@@ -195,8 +197,6 @@ const StationManagement = () => {
     const clearedFilters = {
       name: "",
       region: "",
-      managerName: "",
-      managerPhone: "",
     };
     setFilters(clearedFilters);
     debouncedFetchStations(clearedFilters);
@@ -207,7 +207,7 @@ const StationManagement = () => {
       navigate("/signin", { state: { from: location } });
       return;
     }
-    setEditingRowId(station._id);
+    setEditingStationId(station._id);
     setEditValues({
       name: station.name,
       managerName: station.managerName,
@@ -226,13 +226,13 @@ const StationManagement = () => {
     }
     const updateData = {
       ...editValues,
-      stationId: editingRowId,
+      stationId: editingStationId,
     };
     await updateStationMutation.mutateAsync(updateData);
   };
 
   const cancelEditing = () => {
-    setEditingRowId(null);
+    setEditingStationId(null);
     setEditValues({
       name: "",
       managerName: "",
@@ -271,9 +271,39 @@ const StationManagement = () => {
   const stations = stationsData?.data?.stations || [];
   const regionsOptions = regions?.data?.regions || [];
 
+  const LoadingSkeleton = () => (
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="bg-white rounded-lg shadow p-4 animate-pulse"
+        >
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-gray-200 rounded-lg flex-shrink-0"></div>
+            <div className="flex-1 min-w-0">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          </div>
+          <div className="space-y-2 mb-4">
+            <div className="h-3 bg-gray-200 rounded w-full"></div>
+            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+          </div>
+          <div className="flex justify-between items-center">
+            <div className="h-6 bg-gray-200 rounded-full w-20"></div>
+            <div className="flex gap-2">
+              <div className="h-8 w-8 bg-gray-200 rounded"></div>
+              <div className="h-8 w-8 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (isStationsError) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <h2 className="text-xl text-red-600">
           Error: {stationsError?.message || "Something went wrong"}
         </h2>
@@ -282,25 +312,31 @@ const StationManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-2xl font-bold text-gray-900">
+    <div className="min-h-[calc(100vh-6rem)] flex flex-col bg-gray-50">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 bg-white shadow-sm border-b">
+        <div className="px-4 py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-900">
               Station Management
             </h1>
+            <div className="text-sm text-gray-500">
+              Total:{" "}
+              <span className="font-medium text-blue-600">
+                {stations.length}
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
+      {/* Tab Navigation - Fixed */}
+      <div className="flex-shrink-0 bg-white border-b">
+        <div className="px-4">
+          <nav className="flex space-x-4 sm:space-x-8 overflow-x-auto">
             <button
               onClick={() => setActiveTab("list")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                 activeTab === "list"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -310,7 +346,7 @@ const StationManagement = () => {
             </button>
             <button
               onClick={() => setActiveTab("add")}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 whitespace-nowrap ${
                 activeTab === "add"
                   ? "border-blue-500 text-blue-600"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -323,31 +359,31 @@ const StationManagement = () => {
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Content - Scrollable */}
+      <div className="flex-1 overflow-auto">
         {activeTab === "list" ? (
-          <div className="space-y-6">
+          <div className="p-4 space-y-4">
             {/* Search and Filters */}
             <div className="bg-white p-4 rounded-lg shadow">
               <form
                 onSubmit={handleSearchSubmit}
-                className="flex items-center gap-4"
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
               >
-                <div className="relative flex-1 max-w-md">
+                <div className="relative flex-1 max-w-full sm:max-w-md">
                   <input
                     type="text"
                     placeholder="Search by station name..."
                     value={searchTerm}
                     onChange={handleSearchChange}
-                    className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                 </div>
 
                 <select
                   value={filters.region}
                   onChange={(e) => handleFilterChange("region", e.target.value)}
-                  className="h-10 border border-gray-300 rounded-md px-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="h-10 border border-gray-300 rounded-lg px-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-0"
                 >
                   <option value="">All Regions</option>
                   {regionsOptions?.map((region) => (
@@ -360,218 +396,194 @@ const StationManagement = () => {
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="h-10 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    className="h-10 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                     <Search className="h-4 w-4" />
-                    Search
+                    <span className="hidden sm:inline text-sm">Search</span>
                   </button>
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="h-10 px-4 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center gap-2"
+                    className="h-10 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
                   >
                     <X className="h-4 w-4" />
-                    Clear
+                    <span className="hidden sm:inline text-sm">Clear</span>
                   </button>
                 </div>
               </form>
             </div>
 
-            {/* Stations Table */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              {isStationsLoading ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          #
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Station Name
-                        </th>
-                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Region
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Manager
-                        </th>
-                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Phone
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <SkeletonRow key={index} />
-                      ))}
-                    </tbody>
-                  </table>
+            {/* Stations Grid */}
+            {isStationsLoading ? (
+              <LoadingSkeleton />
+            ) : stations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <FiMapPin className="w-8 h-8 text-gray-400" />
                 </div>
-              ) : stations.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">No stations found</p>
-                  <button
-                    onClick={() => setActiveTab("add")}
-                    className="mt-4 bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No stations found
+                </h3>
+                <p className="text-sm mb-4 text-center">
+                  Try adjusting your search criteria
+                </p>
+                <button
+                  onClick={() => setActiveTab("add")}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Add Your First Station
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {stations.map((station) => (
+                  <div
+                    key={station._id}
+                    className={`bg-white rounded-lg shadow-sm border transition-all duration-200 hover:shadow-md ${
+                      editingStationId === station._id
+                        ? "ring-2 ring-blue-500 border-blue-200"
+                        : "border-gray-200"
+                    }`}
                   >
-                    Add Your First Station
-                  </button>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          #
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Station Name
-                        </th>
-                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Region
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Manager
-                        </th>
-                        <th className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Phone
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {stations.map((station, index) => (
-                        <tr
-                          key={station._id}
-                          className={`hover:bg-gray-50 ${
-                            editingRowId === station._id ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {index + 1}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingRowId === station._id ? (
-                              <input
-                                type="text"
-                                value={editValues.name}
-                                onChange={(e) =>
-                                  handleEditChange("name", e.target.value)
-                                }
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              />
-                            ) : (
-                              <div className="text-sm font-medium text-gray-900">
+                    {editingStationId === station._id ? (
+                      // Edit Mode
+                      <div className="p-4">
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Station Name
+                            </label>
+                            <input
+                              type="text"
+                              value={editValues.name}
+                              onChange={(e) =>
+                                handleEditChange("name", e.target.value)
+                              }
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Manager Name
+                            </label>
+                            <input
+                              type="text"
+                              value={editValues.managerName}
+                              onChange={(e) =>
+                                handleEditChange("managerName", e.target.value)
+                              }
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Manager Phone
+                            </label>
+                            <input
+                              type="text"
+                              value={editValues.managerPhone}
+                              onChange={(e) =>
+                                handleEditChange("managerPhone", e.target.value)
+                              }
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                          </div>
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={saveChanges}
+                              disabled={updateStationMutation.isLoading}
+                              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                              <IoCheckmarkDoneSharp className="w-4 h-4" />
+                              <span className="text-sm">Save</span>
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
+                            >
+                              <MdOutlineCancel className="w-4 h-4" />
+                              <span className="text-sm">Cancel</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-semibold flex-shrink-0">
+                              {station.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-gray-900 truncate">
                                 {station.name}
-                              </div>
-                            )}
-                          </td>
-                          <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {station.region?.title || "N/A"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {editingRowId === station._id ? (
-                              <input
-                                type="text"
-                                value={editValues.managerName}
-                                onChange={(e) =>
-                                  handleEditChange(
-                                    "managerName",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              />
-                            ) : (
-                              <div className="text-sm text-gray-900">
-                                {station.managerName}
-                              </div>
-                            )}
-                          </td>
-                          <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
-                            {editingRowId === station._id ? (
-                              <input
-                                type="text"
-                                value={editValues.managerPhone}
-                                onChange={(e) =>
-                                  handleEditChange(
-                                    "managerPhone",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              />
-                            ) : (
-                              <div className="text-sm text-gray-900">
-                                {station.managerPhone}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {editingRowId === station._id ? (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={saveChanges}
-                                  className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-md transition-colors"
-                                >
-                                  <IoCheckmarkDoneSharp className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={cancelEditing}
-                                  className="bg-gray-500 hover:bg-gray-600 text-white p-2 rounded-md transition-colors"
-                                >
-                                  <MdOutlineCancel className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => startEditing(station)}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition-colors"
-                                >
-                                  <FiEdit className="w-4 h-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(station._id)}
-                                  className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition-colors"
-                                >
-                                  <MdDelete className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                              </h3>
+                            </div>
+                          </div>
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 ml-2 flex-shrink-0">
+                            {station.region?.title || "No Region"}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center text-sm text-gray-600">
+                            <User className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                            <span className="font-medium">Manager:</span>
+                            <span className="ml-1 truncate">
+                              {station.managerName}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Phone className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                            <span className="font-medium">Phone:</span>
+                            <span className="ml-1 truncate">
+                              {station.managerPhone}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end items-center">
+                          <div className="flex gap-8 flex-shrink-0">
+                            <button
+                              onClick={() => startEditing(station)}
+                              className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition-colors"
+                              title="Edit station"
+                            >
+                              <FiEdit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(station._id)}
+                              className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition-colors"
+                              title="Delete station"
+                            >
+                              <MdDelete className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           /* Add Station Form */
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-lg shadow p-6">
+          <div className="p-4">
+            <div className="max-w-2xl mx-auto bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">
                 Add New Station
               </h2>
 
               <form onSubmit={formik.handleSubmit} className="space-y-6">
-                <div className="relative">
+                <div>
                   <label
                     htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 mb-2 text-left"
+                    className="block text-sm font-medium text-gray-700 mb-2"
                   >
                     Station Name
                   </label>
-                  {renderError("name")}
                   <input
                     type="text"
                     name="name"
@@ -584,16 +596,16 @@ const StationManagement = () => {
                         : "border-gray-300"
                     }`}
                   />
+                  {renderError("name")}
                 </div>
 
-                <div className="relative">
+                <div>
                   <label
                     htmlFor="region"
-                    className="block text-sm font-medium text-gray-700 mb-2 text-left"
+                    className="block text-sm font-medium text-gray-700 mb-2"
                   >
                     Region
                   </label>
-                  {renderError("region")}
                   <select
                     name="region"
                     id="region"
@@ -611,16 +623,16 @@ const StationManagement = () => {
                       </option>
                     ))}
                   </select>
+                  {renderError("region")}
                 </div>
 
-                <div className="relative">
+                <div>
                   <label
                     htmlFor="managerName"
-                    className="block text-sm font-medium text-gray-700 mb-2 text-left"
+                    className="block text-sm font-medium text-gray-700 mb-2"
                   >
                     Manager Name
                   </label>
-                  {renderError("managerName")}
                   <input
                     type="text"
                     name="managerName"
@@ -633,16 +645,16 @@ const StationManagement = () => {
                         : "border-gray-300"
                     }`}
                   />
+                  {renderError("managerName")}
                 </div>
 
-                <div className="relative">
+                <div>
                   <label
                     htmlFor="managerPhone"
-                    className="block text-sm font-medium text-gray-700 mb-2 text-left"
+                    className="block text-sm font-medium text-gray-700 mb-2"
                   >
                     Manager Phone
                   </label>
-                  {renderError("managerPhone")}
                   <input
                     type="tel"
                     name="managerPhone"
@@ -655,9 +667,10 @@ const StationManagement = () => {
                         : "border-gray-300"
                     }`}
                   />
+                  {renderError("managerPhone")}
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <button
                     type="submit"
                     disabled={formik.isSubmitting}
@@ -702,12 +715,3 @@ const StationManagement = () => {
 };
 
 export default StationManagement;
-const SkeletonRow = () => (
-  <tr className="animate-pulse">
-    {Array.from({ length: 6 }).map((_, i) => (
-      <td key={i} className="px-6 py-4">
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-      </td>
-    ))}
-  </tr>
-);

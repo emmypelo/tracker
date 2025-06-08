@@ -1,5 +1,3 @@
-"use client";
-
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -2,7 +2,7 @@ import { createTransport } from "nodemailer";
 
 const sendPasswordMail = async (to, token) => {
   try {
-    // 1. Create transporter with better configuration
+    
     const transporter = createTransport({
       service: "gmail",
       auth: {
@@ -11,10 +11,9 @@ const sendPasswordMail = async (to, token) => {
       },
     });
 
-    // 2. Verify transporter configuration
+    
     await transporter.verify();
 
-    // 3. Create the message
     const message = {
       from: process.env.GMAIL_USER,
       to,

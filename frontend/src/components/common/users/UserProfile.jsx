@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -11,9 +9,7 @@ import { useSelector } from "react-redux";
 
 export default function UserProfile() {
   const { userAuth } = useSelector((state) => state.auth);
-  const {
-    _id: userId,
-  } = userAuth?.data || {};
+  const { _id: userId } = userAuth?.data || {};
   const queryClient = useQueryClient();
 
   // Edit states for individual fields
@@ -210,9 +206,6 @@ export default function UserProfile() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">User Profile</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Manage your account information and settings
-              </p>
             </div>
           </div>
         </div>
@@ -261,9 +254,6 @@ export default function UserProfile() {
                   </dt>
                   <dd className="text-sm text-gray-900 flex items-center">
                     {user?.email || "Not provided"}
-                    <span className="ml-2 text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-                      Non-editable
-                    </span>
                   </dd>
                 </div>
               </div>

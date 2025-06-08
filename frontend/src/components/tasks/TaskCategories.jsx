@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -202,13 +200,13 @@ const TaskCategories = () => {
               >
                 <Link
                   to={`/manage/${activeView}/${item._id}`}
-                  className=" items-center justify-between p-6 block"
+                  className="block p-4"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center min-w-0 flex-1 pr-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
                         <svg
-                          className="w-5 h-5 text-white"
+                          className="w-4 h-4 text-white"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -221,39 +219,39 @@ const TaskCategories = () => {
                           />
                         </svg>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 truncate">
                           {activeView === "categories"
                             ? item.category
                             : item.title}
                         </h3>
                         {item.description && (
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-1 overflow-hidden">
                             {item.description}
                           </p>
                         )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                      <span className="text-sm font-medium text-gray-600">
-                        {item.tasks?.length || 0} tasks
-                      </span>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <div className="flex items-center bg-gray-50 px-2 py-1 rounded-full">
+                        <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                          {item.tasks?.length || 0}
+                        </span>
+                      </div>
+                      <svg
+                        className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
                     </div>
-                    <svg
-                      className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
                   </div>
                 </Link>
               </div>
@@ -379,22 +377,25 @@ const TaskCategories = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-none px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-              <div>
-                <p className="text-indigo-100 capitalize text-left">
-                  {" "}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+              <div className="min-w-0">
+                <h1 className="text-xl lg:text-2xl font-bold text-white mb-1 truncate">
+                  Task Management
+                </h1>
+                <p className="text-indigo-100 text-sm capitalize">
+                  Manage your{" "}
                   {activeView === "categories" ? "categories" : "subcategories"}
                 </p>
               </div>
-              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+              <div className="flex flex-col sm:flex-row items-stretch gap-2 w-full lg:w-auto">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-1 flex">
                   <button
                     onClick={() => toggleView("categories")}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 flex-1 ${
                       activeView === "categories"
                         ? "bg-white text-indigo-600 shadow-sm"
                         : "text-white hover:bg-white/10"
@@ -404,7 +405,7 @@ const TaskCategories = () => {
                   </button>
                   <button
                     onClick={() => toggleView("subcategories")}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                    className={`px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 flex-1 ${
                       activeView === "subcategories"
                         ? "bg-white text-indigo-600 shadow-sm"
                         : "text-white hover:bg-white/10"
@@ -415,10 +416,10 @@ const TaskCategories = () => {
                 </div>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm"
+                  className="bg-white text-indigo-600 px-3 py-2 rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm justify-center whitespace-nowrap"
                 >
                   <svg
-                    className="w-4 h-4 mr-2"
+                    className="w-4 h-4 mr-1 flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -430,7 +431,7 @@ const TaskCategories = () => {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  New
+                  <span>New</span>
                 </button>
               </div>
             </div>

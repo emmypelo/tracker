@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useLocation } from "react-router-dom";
@@ -75,30 +73,34 @@ const AddRegion = () => {
     formik.touched[field] &&
     formik.errors[field] && (
       <div className="mt-2 flex items-center text-red-500 text-sm">
-        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+        <svg
+          className="w-4 h-4 mr-1 flex-shrink-0"
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
           <path
             fillRule="evenodd"
             d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
             clipRule="evenodd"
           />
         </svg>
-        {formik.errors[field]}
+        <span className="truncate">{formik.errors[field]}</span>
       </div>
     );
 
   // Loading skeleton component
   const LoadingSkeleton = () => (
-    <div className="animate-pulse space-y-4 p-6">
+    <div className="animate-pulse space-y-4 p-4 sm:p-6">
       {[...Array(5)].map((_, i) => (
         <div
           key={i}
           className="flex items-center justify-between p-4 bg-gray-100 rounded-lg"
         >
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
             <div className="h-3 bg-gray-200 rounded w-1/2"></div>
           </div>
-          <div className="h-6 bg-gray-300 rounded-full w-16"></div>
+          <div className="h-6 bg-gray-300 rounded-full w-16 flex-shrink-0 ml-4"></div>
         </div>
       ))}
     </div>
@@ -111,7 +113,7 @@ const AddRegion = () => {
     }
 
     return (
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         {items.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
@@ -138,7 +140,7 @@ const AddRegion = () => {
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               No regions yet
             </h3>
-            <p className="text-gray-500 mb-6">
+            <p className="text-gray-500 mb-6 text-center">
               Get started by creating your first region.
             </p>
             <button
@@ -162,7 +164,7 @@ const AddRegion = () => {
             </button>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item, index) => (
               <div
                 key={item._id}
@@ -171,11 +173,11 @@ const AddRegion = () => {
               >
                 <Link
                   to={`/manage/regions/${item._id}`}
-                  className=" items-center justify-between p-6 block"
+                  className="block p-4 sm:p-6"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center mb-2">
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center mb-2 min-w-0 flex-1">
+                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
                         <svg
                           className="w-5 h-5 text-white"
                           fill="none"
@@ -196,33 +198,19 @@ const AddRegion = () => {
                           />
                         </svg>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="md:text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 ">
                           {item.title}
                         </h3>
-                        <div className="flex items-center space-x-4 mt-1"></div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full">
-                      <span className="text-sm font-medium text-gray-600">
-                        {item.stations?.length || 0} Stations
-                      </span>
+                    <div className="flex align-middle self-center  justify-center space-x-1 flex-shrink-0 ml-2  ">
+                      <div className="flex items-center bg-gray-50 px-2 sm:px-2 py-1.5 rounded-full">
+                        <span className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">
+                          {item.stations?.length || 0} Stations
+                        </span>
+                      </div>
                     </div>
-                    <svg
-                      className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors duration-200"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
                   </div>
                 </Link>
               </div>
@@ -235,7 +223,7 @@ const AddRegion = () => {
 
   // Render add form
   const renderAddForm = () => (
-    <form className="p-6 space-y-6" onSubmit={formik.handleSubmit}>
+    <form className="p-4 sm:p-6 space-y-6" onSubmit={formik.handleSubmit}>
       <div>
         <label
           htmlFor="title"
@@ -263,7 +251,7 @@ const AddRegion = () => {
           htmlFor="rss"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
-          RSS 
+          RSS
         </label>
         <input
           type="text"
@@ -285,7 +273,7 @@ const AddRegion = () => {
           htmlFor="supervisor"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
-          Supervisor 
+          Supervisor
         </label>
         <input
           type="text"
@@ -302,7 +290,7 @@ const AddRegion = () => {
         {renderError("supervisor")}
       </div>
 
-      <div className="flex space-x-3 pt-4">
+      <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4">
         <button
           type="button"
           onClick={() => {
@@ -365,18 +353,21 @@ const AddRegion = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-6rem)] bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 sm:mb-8">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-white">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">
                   Manage Regions
                 </h1>
+                <p className="text-indigo-100 text-sm mt-1">
+                  Total: {regions.length} regions
+                </p>
               </div>
-              <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setIsAddModalOpen(true)}
                   className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm"
@@ -394,7 +385,8 @@ const AddRegion = () => {
                       d="M12 4v16m8-8H4"
                     />
                   </svg>
-                  Add Region
+                  <span className="hidden sm:inline">Add Region</span>
+                  <span className="sm:hidden">Add</span>
                 </button>
               </div>
             </div>
@@ -404,7 +396,7 @@ const AddRegion = () => {
         {/* Content */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           {regionsError ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 px-4">
               <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
                 <svg
                   className="w-8 h-8 text-red-500"
@@ -423,7 +415,7 @@ const AddRegion = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 Something went wrong
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 mb-6 text-center">
                 Error loading regions. Please try again later.
               </p>
               <button
@@ -452,7 +444,7 @@ const AddRegion = () => {
         </div>
 
         {/* Add Region Modal */}
-        <Modal 
+        <Modal
           isOpen={isAddModalOpen}
           onClose={() => {
             setIsAddModalOpen(false);

@@ -1,5 +1,3 @@
-"use client";
-
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +6,7 @@ import {
   fetchAllUsersApi,
   adminEditUserApi,
 } from "../../../APIrequests/userAPI.js";
-import { FiEdit } from "react-icons/fi";
+import { FiEdit, FiUser } from "react-icons/fi";
 import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -26,7 +24,7 @@ const AllUsers = () => {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
-  const [editingRowId, setEditingRowId] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
   const [isError, setIsError] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
 
@@ -62,8 +60,24 @@ const AllUsers = () => {
     mutationKey: ["updateUser"],
     mutationFn: adminEditUserApi,
     onSuccess: () => {
-      setEditingRowId(null);
+      setEditingUserId(null);
       queryClient.invalidateQueries(["fetchUsers", filters]);
+      setModalMessage("User updated successfully");
+      setIsError(false);
+      setIsModalOpen(true);
+    },
+    onError: (error) => {
+      setIsError(true);
+      let errorMessage = "User update failed";
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        navigate("/signin", { state: { from: location } });
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
     },
   });
 
@@ -79,7 +93,6 @@ const AllUsers = () => {
     onError: (error) => {
       setIsError(true);
       let errorMessage = "Deleting failed";
-
       if (error.response?.status === 401 || error.message.includes("401")) {
         navigate("/signin", { state: { from: location } });
       } else if (error.response?.data?.message) {
@@ -87,7 +100,6 @@ const AllUsers = () => {
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       }
-
       setModalMessage(errorMessage);
       setIsModalOpen(true);
     },
@@ -104,27 +116,8 @@ const AllUsers = () => {
 
   const confirmDelete = async () => {
     if (!userToDelete) return;
-    try {
-      await deleteMutation.mutateAsync(userToDelete);
-      setIsError(false);
-      setModalMessage("User deleted successfully");
-    } catch (error) {
-      setIsError(true);
-      let errorMessage = "Deleting failed";
-
-      if (error.response?.status === 401 || error.message.includes("401")) {
-        navigate("/signin", { state: { from: location } });
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-
-      setModalMessage(errorMessage);
-    } finally {
-      setIsModalOpen(false);
-      setUserToDelete(null);
-    }
+    await deleteMutation.mutateAsync(userToDelete);
+    setUserToDelete(null);
   };
 
   const cancelDelete = () => {
@@ -147,7 +140,7 @@ const AllUsers = () => {
       navigate("/signin", { state: { from: location } });
       return;
     }
-    setEditingRowId(user._id);
+    setEditingUserId(user._id);
     setEditValues({
       firstname: user.firstname,
       lastname: user.lastname,
@@ -160,31 +153,10 @@ const AllUsers = () => {
       navigate("/signin", { state: { from: location } });
       return;
     }
-    try {
-      await userMutation.mutateAsync({
-        userId: editingRowId,
-        userData: editValues,
-      });
-      setIsError(false);
-      setModalMessage("User updated successfully");
-      setIsModalOpen(true);
-    } catch (error) {
-      setIsError(true);
-      let errorMessage = "User update failed";
-
-      if (error.response?.status === 401 || error.message.includes("401")) {
-        navigate("/signin", { state: { from: location } });
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-
-      setModalMessage(errorMessage);
-      setIsModalOpen(true);
-    } finally {
-      setEditingRowId(null);
-    }
+    await userMutation.mutateAsync({
+      userId: editingUserId,
+      userData: editValues,
+    });
   };
 
   const closeModal = () => {
@@ -195,7 +167,7 @@ const AllUsers = () => {
   };
 
   const cancelEditing = () => {
-    setEditingRowId(null);
+    setEditingUserId(null);
     setEditValues({
       firstname: "",
       lastname: "",
@@ -222,30 +194,31 @@ const AllUsers = () => {
   const users = usersData?.data?.users || [];
   const roles = ["admin", "user"];
 
-  const renderSkeletonRows = (count = 5) => {
-    return Array.from({ length: count }).map((_, index) => (
-      <tr key={index} className="animate-pulse">
-        <td className="border px-1 py-2">
-          <div className="h-4 bg-gray-200 rounded w-6 mx-auto" />
-        </td>
-        <td className="border px-4 py-2">
-          <div className="h-4 bg-gray-200 rounded" />
-        </td>
-        <td className="border px-4 py-2">
-          <div className="h-4 bg-gray-200 rounded" />
-        </td>
-        <td className="border px-4 py-2">
-          <div className="h-4 bg-gray-200 rounded w-3/4" />
-        </td>
-        <td className="border px-4 py-2">
-          <div className="flex gap-2 justify-center">
-            <div className="h-6 w-6 bg-gray-200 rounded-full" />
-            <div className="h-6 w-6 bg-gray-200 rounded-full" />
+  const LoadingSkeleton = () => (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="bg-white rounded-lg shadow p-4 animate-pulse"
+        >
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+            <div className="flex-1">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+            </div>
           </div>
-        </td>
-      </tr>
-    ));
-  };
+          <div className="flex justify-between items-center">
+            <div className="h-6 bg-gray-200 rounded-full w-16"></div>
+            <div className="flex gap-2">
+              <div className="h-8 w-8 bg-gray-200 rounded"></div>
+              <div className="h-8 w-8 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   if (isUsersError)
     return (
@@ -255,161 +228,199 @@ const AllUsers = () => {
     );
 
   return (
-    <div className="relative px-1">
-      <div className="sticky top-[4.6rem] left-0 right-0 bg-white shadow-md z-30">
-        <div className="flex justify-between items-center w-full h-16 px-4 bg-gray-800 text-white">
-          <h1 className="text-l font-bold">Users</h1>
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header - Fixed */}
+      <div className="flex-shrink-0 bg-white shadow-sm border-b">
+        <div className="px-4 py-4">
+          <div className="flex justify-between items-center">
+            <h1 className="text-xl font-bold text-gray-900">User Management</h1>
+            <div className="text-sm text-gray-500">
+              Total:{" "}
+              <span className="font-medium text-blue-600">{users.length}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="sticky top-[4.6rem] z-20 bg-gray-100 h-16 border-b border-gray-200">
-        <form
-          onSubmit={handleSearchSubmit}
-          className="flex items-center gap-2 h-full px-4"
-        >
-          <div className="relative flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Search by name"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              className="w-full h-10 pl-10 pr-4 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              className="h-10 w-10 flex items-center justify-center bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="h-10 w-10 flex items-center justify-center bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </form>
+      {/* Search Bar - Fixed */}
+      <div className="flex-shrink-0 bg-white border-b">
+        <div className="px-4 py-4">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex items-center gap-3"
+          >
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full h-10 pl-10 pr-4 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="h-10 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm">Search</span>
+              </button>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="h-10 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm">Clear</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300 bg-white">
-          <thead>
-            <tr className="sticky top-[rem] bg-gray-200 text-sm">
-              <th className="border p-1 w-[5%]">S/N</th>
-              <th className="border p-1">First Name</th>
-              <th className="border p-1">Last Name</th>
-              <th className="border p-1">Role</th>
-              <th className="border p-1">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              renderSkeletonRows()
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="text-center py-4">
-                  No users found
-                </td>
-              </tr>
-            ) : (
-              users.map((user, index) => (
-                <tr
-                  key={user._id}
-                  className={`hover:bg-gray-100 text-sm md:text-base h-12 ${
-                    editingRowId === user._id ? "bg-yellow-50" : ""
-                  }`}
-                >
-                  <td className="border px-1 py-2">{index + 1}</td>
-                  <td className="border px-4 py-2">
-                    {editingRowId === user._id ? (
-                      <input
-                        type="text"
-                        value={editValues.firstname}
-                        onChange={(e) =>
-                          handleEditChange("firstname", e.target.value)
-                        }
-                        className="w-full p-1 border rounded h-8"
-                      />
-                    ) : (
-                      user.firstname
-                    )}
-                  </td>
-                  <td className="border px-4 py-2">
-                    {editingRowId === user._id ? (
-                      <input
-                        type="text"
-                        value={editValues.lastname}
-                        onChange={(e) =>
-                          handleEditChange("lastname", e.target.value)
-                        }
-                        className="w-full p-1 border rounded h-8"
-                      />
-                    ) : (
-                      user.lastname
-                    )}
-                  </td>
-                  <td className="border px-4 py-2">
-                    {editingRowId === user._id ? (
-                      <select
-                        value={editValues.role}
-                        onChange={(e) =>
-                          handleEditChange("role", e.target.value)
-                        }
-                        className="w-full p-1 border rounded h-8"
-                      >
-                        {roles.map((role) => (
-                          <option key={role} value={role}>
-                            {role.charAt(0).toUpperCase() + role.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      user.role.charAt(0).toUpperCase() + user.role.slice(1)
-                    )}
-                  </td>
-                  <td className="border px-4 py-2">
-                    {editingRowId === user._id ? (
-                      <div className="flex justify-between items-center h-8">
+      {/* Content - Scrollable */}
+      <div className="flex-1 overflow-auto p-4">
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <FiUser className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No users found
+            </h3>
+            <p className="text-sm">Try adjusting your search criteria</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {users.map((user) => (
+              <div
+                key={user._id}
+                className={`bg-white rounded-lg shadow-sm border transition-all duration-200 hover:shadow-md ${
+                  editingUserId === user._id
+                    ? "ring-2 ring-blue-500 border-blue-200"
+                    : "border-gray-200"
+                }`}
+              >
+                {editingUserId === user._id ? (
+                  // Edit Mode
+                  <div className="p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editValues.firstname}
+                          onChange={(e) =>
+                            handleEditChange("firstname", e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          value={editValues.lastname}
+                          onChange={(e) =>
+                            handleEditChange("lastname", e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Role
+                        </label>
+                        <select
+                          value={editValues.role}
+                          onChange={(e) =>
+                            handleEditChange("role", e.target.value)
+                          }
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        >
+                          {roles.map((role) => (
+                            <option key={role} value={role}>
+                              {role.charAt(0).toUpperCase() + role.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 pt-2">
                         <button
                           onClick={saveChanges}
-                          className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1"
+                          disabled={userMutation.isLoading}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                         >
-                          <IoCheckmarkDoneSharp className="w-3 h-3" />
+                          <IoCheckmarkDoneSharp className="w-4 h-4" />
+                          <span className="text-sm">Save</span>
                         </button>
                         <button
                           onClick={cancelEditing}
-                          className="bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2"
                         >
-                          <MdOutlineCancel className="w-3 h-3" />
+                          <MdOutlineCancel className="w-4 h-4" />
+                          <span className="text-sm">Cancel</span>
                         </button>
                       </div>
-                    ) : (
-                      <div className="flex justify-between items-center h-8 gap-2">
+                    </div>
+                  </div>
+                ) : (
+                  // View Mode
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {user.firstname.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {user.firstname} {user.lastname}
+                          </h3>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          user.role === "admin"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-end items-center">
+                      <div className="flex gap-8">
                         <button
                           onClick={() => startEditing(user)}
-                          className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1"
+                          className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-md transition-colors"
+                          title="Edit user"
                         >
-                          <FiEdit className="w-3 h-3" />
+                          <FiEdit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(user._id)}
-                          className="bg-red-500 hover:bg-red-600 text-white rounded-full p-1"
+                          className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-md transition-colors"
+                          title="Delete user"
                         >
-                          <MdDelete className="w-3 h-3" />
+                          <MdDelete className="w-4 h-4" />
                         </button>
                       </div>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Modal
@@ -421,7 +432,13 @@ const AllUsers = () => {
         onCancel={cancelDelete}
         deleteConfirmationText="Are you sure you want to delete this user? This action cannot be undone."
       >
-        <p>{modalMessage}</p>
+        <p
+          className={`text-center ${
+            isError ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {modalMessage}
+        </p>
       </Modal>
     </div>
   );
