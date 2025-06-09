@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -56,9 +58,10 @@ const AllUsers = () => {
     keepPreviousData: true,
   });
 
+  // Fixed mutation function
   const userMutation = useMutation({
     mutationKey: ["updateUser"],
-    mutationFn: adminEditUserApi,
+    mutationFn: ({ userId, userData }) => adminEditUserApi(userId, userData),
     onSuccess: () => {
       setEditingUserId(null);
       queryClient.invalidateQueries(["fetchUsers", filters]);
@@ -148,11 +151,14 @@ const AllUsers = () => {
     });
   };
 
+  // Fixed saveChanges function
   const saveChanges = async () => {
     if (!isAuthenticated) {
       navigate("/signin", { state: { from: location } });
       return;
     }
+
+    // Use the mutation instead of direct API call
     await userMutation.mutateAsync({
       userId: editingUserId,
       userData: editValues,
@@ -162,7 +168,8 @@ const AllUsers = () => {
   const closeModal = () => {
     setIsModalOpen(false);
     if (!isError) {
-      navigate("/");
+      // Don't navigate away after successful update
+      // navigate("/");
     }
   };
 
@@ -356,11 +363,13 @@ const AllUsers = () => {
                       <div className="flex gap-2 pt-2">
                         <button
                           onClick={saveChanges}
-                          disabled={userMutation.isLoading}
+                          disabled={userMutation.isPending}
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-md transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                         >
                           <IoCheckmarkDoneSharp className="w-4 h-4" />
-                          <span className="text-sm">Save</span>
+                          <span className="text-sm">
+                            {userMutation.isPending ? "Saving..." : "Save"}
+                          </span>
                         </button>
                         <button
                           onClick={cancelEditing}

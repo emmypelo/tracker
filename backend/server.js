@@ -45,7 +45,7 @@ app.use(cors(corsOptions));
 app.use(debugMiddleware);
 app.use("/api/auth", userRouter);
 
-// Protected routes (add authenticateToken middleware to protect these)
+
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
 app.use("/api/category", categoryRouter);

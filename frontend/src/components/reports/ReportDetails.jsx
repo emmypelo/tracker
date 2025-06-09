@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -16,6 +18,55 @@ import {
 } from "lucide-react";
 import AlertComponent from "../common/AlertComponent";
 import { useSelector } from "react-redux";
+
+// Skeleton component for loading state
+const ReportDetailsSkeleton = () => (
+  <div className="container mx-auto px-4 py-8 animate-pulse">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded-full"></div>
+        </div>
+
+        {/* Report Info Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center">
+                <div className="w-5 h-5 mr-2 bg-gray-200 rounded-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-20 mr-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-28"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Report Dates Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center">
+                <div className="w-5 h-5 mr-2 bg-gray-200 rounded-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-20 mr-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-28"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Skeleton */}
+      <div className="bg-gray-100 px-6 py-4">
+        <div className="flex flex-wrap gap-4">
+          <div className="h-8 w-24 bg-gray-200 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const ReportDetails = () => {
   const { reportId } = useParams();
@@ -96,11 +147,12 @@ const ReportDetails = () => {
     });
   };
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading) return <ReportDetailsSkeleton />;
   if (error) return <ErrorState error={error} />;
 
   const report = reportData?.data?.report;
-  if (!report || Object.keys(report).length === 0) return <NoReportState />
+  if (!report || Object.keys(report).length === 0) return <NoReportState />;
+
   return (
     <div className="container mx-auto px-4 py-8">
       {alert && (
@@ -153,12 +205,6 @@ const ReportDetails = () => {
     </div>
   );
 };
-
-const LoadingState = () => (
-  <div className="flex justify-center items-center h-screen">
-    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
 
 const ErrorState = ({ error }) => (
   <div className="text-red-500 text-center p-4">

@@ -89,7 +89,7 @@ const taskController = {
       filter.subCategory = subCategory;
     }
     if (title) {
-      filter.title = { $regex: title, $options: "i" }; // case insensitive
+      filter.title = { $regex: title, $options: "i" }; // 
     }
     if (isApproved) {
       filter.isApproved = isApproved;

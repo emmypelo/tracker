@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +19,68 @@ import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
 import { fetchStationsApi } from "../../APIrequests/stationsAPI";
 import { Search, X } from "lucide-react";
+
+// Skeleton component for loading state
+const ReportSkeleton = ({ rows = 5 }) => {
+  return (
+    <div className="animate-pulse">
+      <table className="w-full border-collapse border border-gray-300 bg-white">
+        <thead>
+          <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
+            <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
+            <th className="border p-1 w-[25%]">Title</th>
+            <th className="border p-1 w-[15%] hidden md:table-cell">Region</th>
+            <th className="border p-1 w-[10%] hidden md:table-cell">Station</th>
+            <th className="border p-1 w-[15%] hidden md:table-cell">
+              Category
+            </th>
+            <th className="border p-1 w-[10%]">Status</th>
+            <th className="border p-1 w-[20%] hidden md:table-cell">Comment</th>
+            <th className="border p-1 w-[10%]">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array(rows)
+            .fill()
+            .map((_, index) => (
+              <tr
+                key={index}
+                className="hover:bg-gray-100 text-sm md:text-base h-12 max-h-36"
+              >
+                <td className="border px-1 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-4 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-24"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-32"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="flex justify-between">
+                    <div className="h-5 w-5 bg-gray-200 rounded-full"></div>
+                    <div className="h-5 w-5 bg-gray-200 rounded-full"></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 const FetchReport = () => {
   const navigate = useNavigate();
@@ -59,6 +123,7 @@ const FetchReport = () => {
     data: reportsData,
     error: reportsError,
     refetch: reportRefetch,
+    isLoading: isReportsLoading,
   } = useQuery({
     queryKey: ["fetchReports", filters],
     queryFn: () => fetchReportsApi(filters),
@@ -373,8 +438,10 @@ const FetchReport = () => {
         </form>
       </div>
 
-      {reports.length === 0 ? (
-        <div>No reports found</div>
+      {isReportsLoading ? (
+        <ReportSkeleton rows={8} />
+      ) : reports.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">No reports found</div>
       ) : (
         <div>
           <table className="w-full border-collapse border border-gray-300 bg-white">

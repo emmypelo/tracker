@@ -167,7 +167,7 @@ const userController = {
     }
   }),
 
-  // User login - Replaced Passport with direct JWT authentication
+  
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -227,7 +227,7 @@ const userController = {
       const limit = Number.parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
 
-      const { name, email, role } = req.query;
+      const { name } = req.query;
       const filter = {};
 
       // Enhanced filtering options
@@ -235,16 +235,11 @@ const userController = {
         filter.$or = [
           { firstname: { $regex: name, $options: "i" } },
           { lastname: { $regex: name, $options: "i" } },
+          { email: { $regex: name.toLowerCase(), $options: "i" } },
+          {role: { $regex: name, $options: "i" } }
         ];
       }
 
-      if (email) {
-        filter.email = { $regex: email.toLowerCase(), $options: "i" };
-      }
-
-      if (role) {
-        filter.role = role;
-      }
 
       const users = await User.find(filter)
         .select(
@@ -252,7 +247,7 @@ const userController = {
         )
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 }); // Sort by newest first
+        .sort({ createdAt: -1 }); 
 
       const total = await User.countDocuments(filter);
 
@@ -324,7 +319,6 @@ const userController = {
       // Verify the JWT token
       const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
 
-      // CRITICAL FIX: Extract the user ID and validate it properly
       const userIdFromToken = decodedUser.id;
 
       // Validate that we have a user ID
@@ -352,7 +346,6 @@ const userController = {
         });
       }
 
-      // CRITICAL: Use the validated userIdString, NOT any other variable
       const user = await User.findById(userIdString).select(
         "-password -authMethod -passwordResetToken -passwordResetExpires"
       );

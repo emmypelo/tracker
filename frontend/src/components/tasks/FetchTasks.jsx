@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +19,78 @@ import Modal from "../common/Modal";
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
 import { Search, X } from "lucide-react";
+
+// Skeleton component for loading state
+const TaskSkeleton = ({ rows = 5 }) => {
+  return (
+    <div className="animate-pulse">
+      <table className="w-full border-collapse border border-gray-300 bg-white">
+        <thead>
+          <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
+            <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
+            <th className="border p-1 w-[30%]">Title</th>
+            <th className="border p-1 w-[10%]">Amount</th>
+            <th className="border p-1 w-[10%] hidden md:table-cell">
+              Category
+            </th>
+            <th className="border p-1 w-[10%] hidden md:table-cell">
+              SubCategory
+            </th>
+            <th className="border p-1 w-[6%] hidden md:table-cell">Approved</th>
+            <th className="border p-1 w-[6%] hidden md:table-cell">Paid</th>
+            <th className="border p-1 w-[6%] hidden md:table-cell">Progress</th>
+            <th className="border p-1 w-[6%]">Completed</th>
+            <th className="border p-1 w-[12%]">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array(rows)
+            .fill()
+            .map((_, index) => (
+              <tr
+                key={index}
+                className="hover:bg-gray-100 text-sm md:text-base h-12 max-h-36"
+              >
+                <td className="border px-1 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-4 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2 hidden md:table-cell">
+                  <div className="h-4 bg-gray-200 rounded w-10 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="h-4 bg-gray-200 rounded w-8 mx-auto"></div>
+                </td>
+                <td className="border px-4 py-2">
+                  <div className="flex justify-between">
+                    <div className="h-5 w-5 bg-gray-200 rounded-full"></div>
+                    <div className="h-5 w-5 bg-gray-200 rounded-full"></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 const FetchTask = () => {
   const navigate = useNavigate();
@@ -60,6 +134,7 @@ const FetchTask = () => {
     data: tasksData,
     error: tasksError,
     refetch: taskRefetch,
+    isLoading: isTasksLoading,
   } = useQuery({
     queryKey: ["fetchTasks", filters],
     queryFn: () => fetchTasksApi(filters),
@@ -358,8 +433,10 @@ const FetchTask = () => {
         </form>
       </div>
 
-      {tasks.length === 0 ? (
-        <div>No tasks found</div>
+      {isTasksLoading ? (
+        <TaskSkeleton rows={8} />
+      ) : tasks.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">No tasks found</div>
       ) : (
         <div>
           <table className="w-full border-collapse border border-gray-300 bg-white">

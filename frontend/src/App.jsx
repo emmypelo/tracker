@@ -1,41 +1,32 @@
-import { Suspense, lazy } from "react";
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import ErrorBoundary from "./components/common/ErrorBoundary";
-import Loading from "./components/common/Loading";
 import Navbar from "./components/common/Navbar";
+
+import Home from "./pages/Home";
+import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import CreateTaskPage from "./pages/CreateTaskPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import TaskDetailsPage from "./pages/TaskDetailsPage";
+import AddRegionPage from "./pages/AddRegionPage";
+import AllStationsPage from "./pages/AllStationsPage";
+import CreateReportPage from "./pages/CreateReportPage";
+import ReportCategoryPage from "./pages/ReportCategoryPage";
+import FetchReportsPage from "./pages/FetchReportsPage";
+import ReportDetailsPage from "./pages/ReportDetailsPage";
+import ManagementLayout from "./components/common/ManagementLayout";
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import TaskCategoriesPage from "./pages/TaskCategoriesPage";
+import TaskCategoryDetailsPage from "./pages/TaskCategoryDetailsPage";
+import TaskSubcategoryDetailsPage from "./pages/TaskSubcategoryDetailsPage";
+import Allusers from "./components/common/users/Allusers";
+import UserProfilePage from "./pages/UserProfilePage";
 
 import "../src/index.css";
 import "../src/App.css";
-import Allusers from "./components/common/users/Allusers";
-import UserProfilePage from "./pages/UserProfilePage";
-// Lazy load all components
-const Home = lazy(() => import("./pages/Home"));
-const SignInPage = lazy(() => import("./pages/SignInPage"));
-const SignUpPage = lazy(() => import("./pages/SignUpPage"));
-
-const CreateTaskPage = lazy(() => import("./pages/CreateTaskPage"));
-const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const TaskDetailsPage = lazy(() => import("./pages/TaskDetailsPage"));
-const AddRegionPage = lazy(() => import("./pages/AddRegionPage"));
-
-const AllStationsPage = lazy(() => import("./pages/AllStationsPage"));
-const CreateReportPage = lazy(() => import("./pages/CreateReportPage"));
-const ReportCategoryPage = lazy(() => import("./pages/ReportCategoryPage"));
-const FetchReportsPage = lazy(() => import("./pages/FetchReportsPage"));
-const ReportDetailsPage = lazy(() => import("./pages/ReportDetailsPage"));
-const ManagementLayout = lazy(() =>
-  import("./components/common/ManagementLayout")
-);
-const ProtectedRoute = lazy(() => import("./components/common/ProtectedRoute"));
-const TaskCategoriesPage = lazy(() => import("./pages/TaskCategoriesPage"));
-const TaskCategoryDetailsPage = lazy(() =>
-  import("./pages/TaskCategoryDetailsPage")
-);
-const TaskSubcategoryDetailsPage = lazy(() =>
-  import("./pages/TaskSubcategoryDetailsPage")
-);
 
 const App = () => {
   return (
@@ -49,55 +40,47 @@ const App = () => {
         <div className="flex flex-col min-h-screen bg-gray-50">
           <Navbar />
           <main className="flex-grow mt-16">
-            <Suspense fallback={<Loading />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/signin" element={<SignInPage />} />
-                <Route path="/signup" element={<SignUpPage />} />
-                <Route path="/newtask" element={<CreateTaskPage />} />
-                <Route
-                  path="/forgot-password"
-                  element={<ForgotPasswordPage />}
-                />
-                <Route
-                  path="/reset-password/:verifyToken"
-                  element={<ResetPasswordPage />}
-                />
-                <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
-                <Route path="/report" element={<CreateReportPage />} />
-                <Route path="/reports" element={<FetchReportsPage />} />
-                <Route
-                  path="/reports/:reportId"
-                  element={<ReportDetailsPage />}
-                />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/signin" element={<SignInPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
+              <Route path="/newtask" element={<CreateTaskPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route
+                path="/reset-password/:verifyToken"
+                element={<ResetPasswordPage />}
+              />
+              <Route path="/tasks/:taskId" element={<TaskDetailsPage />} />
+              <Route path="/report" element={<CreateReportPage />} />
+              <Route path="/reports" element={<FetchReportsPage />} />
+              <Route
+                path="/reports/:reportId"
+                element={<ReportDetailsPage />}
+              />
 
-                {/* Protected management routes */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/manage" element={<ManagementLayout />}>
-                    <Route
-                      path="reportcategory"
-                      element={<ReportCategoryPage />}
-                    />
-
-                    <Route path="stations" element={<AllStationsPage />} />
-                    <Route path="addregion" element={<AddRegionPage />} />
-                    <Route path="categories" element={<TaskCategoriesPage />} />
-                    <Route path="users" element={<Allusers />} />
-                    <Route path="profile" element={<UserProfilePage />} />
-
-                    <Route
-                      path="categories/:categoryId"
-                      element={<TaskCategoryDetailsPage />}
-                    />
-
-                    <Route
-                      path="subcategories/:subCategoryId"
-                      element={<TaskSubcategoryDetailsPage />}
-                    />
-                  </Route>
+              {/* Protected management routes */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/manage" element={<ManagementLayout />}>
+                  <Route
+                    path="reportcategory"
+                    element={<ReportCategoryPage />}
+                  />
+                  <Route path="stations" element={<AllStationsPage />} />
+                  <Route path="addregion" element={<AddRegionPage />} />
+                  <Route path="categories" element={<TaskCategoriesPage />} />
+                  <Route path="users" element={<Allusers />} />
+                  <Route path="profile" element={<UserProfilePage />} />
+                  <Route
+                    path="categories/:categoryId"
+                    element={<TaskCategoryDetailsPage />}
+                  />
+                  <Route
+                    path="subcategories/:subCategoryId"
+                    element={<TaskSubcategoryDetailsPage />}
+                  />
                 </Route>
-              </Routes>
-            </Suspense>
+              </Route>
+            </Routes>
           </main>
         </div>
       </BrowserRouter>

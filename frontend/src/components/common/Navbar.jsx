@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -22,6 +24,12 @@ export default function Navbar() {
   const dispatch = useDispatch();
   const { userAuth } = useSelector((state) => state.auth);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Preload the logo image
+    const preloadImage = new Image();
+    preloadImage.src = logo;
+  }, []);
 
   // Close mobile menu on window resize
   useEffect(() => {
@@ -147,38 +155,42 @@ export default function Navbar() {
         animate={{ opacity: 1, x: 0 }}
         className="flex h-full w-[12%] items-center"
       >
-        <Link to="/" className="w-full h-full">
+        <Link to="/" className="w-full h-full flex items-center">
           <img
-            src={logo}
+            src={logo || "/placeholder.svg"}
             alt="logo"
             className="max-h-full max-w-full object-contain filter drop-shadow-lg"
+            onError={(e) => {
+              e.target.src = "/placeholder.svg?height=40&width=120";
+            }}
+            loading="eager"
           />
         </Link>
       </motion.div>
 
       {/* Desktop Navigation */}
-      {isAuthenticated && (
-        <div className="hidden md:flex w-[40%] lg:w-[20%] justify-center">
-          <ul className="flex w-full justify-between text-lg text-white">
-            {navItems.map((item, index) => (
-              <motion.li
-                key={item.path}
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+      <div className="hidden md:flex w-[40%] lg:w-[20%] justify-center">
+        <ul className="flex w-full justify-between text-lg text-white">
+          {navItems.map((item, index) => (
+            <motion.li
+              key={item.path}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Link
+                to={item.path}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-gray-700/50 hover:text-yellow-400 ${
+                  !isAuthenticated ? "opacity-75 hover:opacity-100" : ""
+                }`}
               >
-                <Link
-                  to={item.path}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 hover:bg-gray-700/50 hover:text-yellow-400"
-                >
-                  <item.icon size={18} />
-                  <span>{item.label}</span>
-                </Link>
-              </motion.li>
-            ))}
-          </ul>
-        </div>
-      )}
+                <item.icon size={18} />
+                <span>{item.label}</span>
+              </Link>
+            </motion.li>
+          ))}
+        </ul>
+      </div>
 
       {/* Right Section with Auth and Menu */}
       <div className="flex items-center gap-4">
@@ -242,28 +254,26 @@ export default function Navbar() {
         </motion.div>
 
         {/* Mobile Menu Button */}
-        {isAuthenticated && (
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden flex items-center gap-2 rounded-lg p-2 text-white hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
-            aria-expanded={isOpen}
-            aria-label="Toggle navigation menu"
+        <motion.button
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className="md:hidden flex items-center gap-2 rounded-lg p-2 text-white hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+          aria-expanded={isOpen}
+          aria-label="Toggle navigation menu"
+        >
+          <motion.div
+            animate={{ rotate: isOpen ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-center gap-2"
           >
-            <motion.div
-              animate={{ rotate: isOpen ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
-              className="flex items-center gap-2"
-            >
-              <Menu size={24} />
-            </motion.div>
-          </motion.button>
-        )}
+            <Menu size={24} />
+          </motion.div>
+        </motion.button>
       </div>
 
       {/* Mobile Navigation */}
       <AnimatePresence>
-        {isOpen && isAuthenticated && (
+        {isOpen && (
           <motion.div
             initial="closed"
             animate="open"
@@ -283,7 +293,9 @@ export default function Navbar() {
                   >
                     <Link
                       to={item.path}
-                      className="flex items-center gap-3 rounded-lg p-3 transition-all duration-300 hover:bg-gray-700/50 active:bg-gray-600/50"
+                      className={`flex items-center gap-3 rounded-lg p-3 transition-all duration-300 hover:bg-gray-700/50 active:bg-gray-600/50 ${
+                        !isAuthenticated ? "opacity-75 hover:opacity-100" : ""
+                      }`}
                       onClick={() => setIsOpen(false)}
                     >
                       <item.icon size={18} />
@@ -292,6 +304,29 @@ export default function Navbar() {
                     </Link>
                   </motion.li>
                 ))}
+
+                {/* Show login option for unauthenticated users */}
+                {!isAuthenticated && (
+                  <motion.li
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: navItems.length * 0.1 }}
+                    className="border-t border-gray-700/50 pt-4 mt-2"
+                  >
+                    <Link
+                      to="/signin"
+                      className="flex items-center gap-3 rounded-lg p-3 bg-gradient-to-r from-yellow-400/10 to-yellow-600/10 border border-yellow-400/20 transition-all duration-300 hover:bg-yellow-400/20 active:bg-yellow-600/20"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <User size={18} className="text-yellow-400" />
+                      <span className="text-yellow-400 font-medium">Login</span>
+                      <ChevronRight
+                        size={16}
+                        className="ml-auto opacity-50 text-yellow-400"
+                      />
+                    </Link>
+                  </motion.li>
+                )}
               </ul>
             </div>
           </motion.div>

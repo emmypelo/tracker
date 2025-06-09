@@ -1,12 +1,14 @@
+"use client";
+
 /* eslint-disable react/prop-types */
 import { useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { taskDetailsApi, updateTaskApi } from "../../APIrequests/taskAPI";
+import { FaNairaSign } from "react-icons/fa6";
 import {
   CheckCircle,
-  XCircle,
-  DollarSign,
+  XCircle,  
   User,
   Briefcase,
   Calendar,
@@ -17,6 +19,77 @@ import {
 } from "lucide-react";
 import AlertComponent from "../common/AlertComponent";
 import { useSelector } from "react-redux";
+
+// Skeleton component for loading state
+const TaskDetailsSkeleton = () => (
+  <div className="container mx-auto px-4 py-8 animate-pulse">
+    <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded-full"></div>
+        </div>
+
+        {/* Task Info Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center">
+                <div className="w-5 h-5 mr-2 bg-gray-200 rounded-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-24 mr-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Task Dates Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center">
+                <div className="w-5 h-5 mr-2 bg-gray-200 rounded-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-20 mr-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-28"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Category Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="flex items-center">
+                <div className="w-5 h-5 mr-2 bg-gray-200 rounded-full"></div>
+                <div className="h-4 bg-gray-200 rounded w-20 mr-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-28"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress Section Skeleton */}
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="h-5 bg-gray-200 rounded w-24 mb-2"></div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mt-2"></div>
+        </div>
+      </div>
+
+      {/* Footer Skeleton */}
+      <div className="bg-gray-100 px-6 py-4">
+        <div className="flex flex-wrap gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-24 bg-gray-200 rounded-full"></div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const TaskDetails = () => {
   const { taskId } = useParams();
@@ -35,10 +108,10 @@ const TaskDetails = () => {
   const location = useLocation();
   const { userAuth } = useSelector((state) => state.auth);
   const isAuthenticated = userAuth?.data?.isAuthenticated === true;
-  // navigate("/signin", { state: { from: location } });
+
   const {
     error,
-   
+    isLoading,
     data: taskData,
     refetch: taskRefetch,
   } = useQuery({
@@ -109,7 +182,7 @@ const TaskDetails = () => {
     });
   };
 
-  // if (isLoading) return <LoadingState />;
+  if (isLoading) return <TaskDetailsSkeleton />;
   if (error) return <ErrorState error={error} />;
 
   const task = taskData?.data?.task;
@@ -167,8 +240,6 @@ const TaskDetails = () => {
   );
 };
 
-
-
 const ErrorState = ({ error }) => (
   <div className="text-red-500 text-center p-4">
     <h2 className="text-2xl font-bold mb-2">Error</h2>
@@ -189,9 +260,12 @@ const TaskInfoSection = ({ task }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <DetailRow icon={Briefcase} label="Vendor" value={task.vendor} />
       <DetailRow
-        icon={DollarSign}
+        icon={FaNairaSign}
         label="Amount"
-        value={`${task.amount.toFixed(2)}`}
+        value={`${task.amount.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })} `}
       />
       <DetailRow icon={User} label="Approver" value={task.approver} />
       <DetailRow
@@ -270,7 +344,9 @@ const TaskEditForm = ({ editValues, editMode, onCancel, onSave, onChange }) => (
             min={0}
             max={100}
             value={editValues.progress}
-            onChange={(e) => onChange("progress", parseInt(e.target.value, 10))}
+            onChange={(e) =>
+              onChange("progress", Number.parseInt(e.target.value, 10))
+            }
             placeholder="Progress"
             className="block w-full p-2 border rounded"
           />

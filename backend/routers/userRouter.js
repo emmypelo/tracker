@@ -14,6 +14,13 @@ userRouter.post("/reset-password/:verifyToken", userController.resetPassword);
 userRouter.get("/", isAuthenticated, userController.fetchAllUsers);
 userRouter.get("/:userId", isAuthenticated, userController.fetchAUser);
 userRouter.delete("/:userId", isAuthenticated, userController.deleteUser);
+
+userRouter.put(
+  "/admin/:userId",
+  isAuthenticated,
+  isAdmin,
+  userController.adminEditUser
+);
 userRouter.put("/:userId", isAuthenticated, userController.editUserProfile);
 userRouter.put(
   "/:userId/change-password",

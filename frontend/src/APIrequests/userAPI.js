@@ -75,10 +75,15 @@ export const logoutApi = async () => {
   return data;
 };
 
-export const fetchAllUsersApi = async () => {
-  const { data } = await axios.get(`${baseUrl}`, {
-    withCredentials: true,
-  });
+export const fetchAllUsersApi = async (filters) => {
+  const { data } = await axios.get(
+    `${baseUrl}`,
+
+    {
+      withCredentials: true,
+      params: filters,
+    }
+  );
 
   return data;
 };
