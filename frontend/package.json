@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "proxy": "https://tracker.pingbyleo.space",
+  "proxy": "https://pingbyleo.space",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
