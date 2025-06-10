@@ -2,7 +2,7 @@ import axios from "axios";
 
 import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = `${backendURL}/api/tasks`;
+const baseUrl = `${backendURL}/tasks`;
 // ? create Task API
 export const createTaskApi = async (postData) => {
   const { data } = await axios.post(`${baseUrl}/create`, postData, {

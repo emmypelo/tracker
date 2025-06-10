@@ -1,7 +1,7 @@
 import axios from "axios";
 import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = `${backendURL}/api/category`;
+const baseUrl = `${backendURL}/category`;
 // ? Category
 export const addCategoryApi = async (categoryData) => {
   const { data } = await axios.post(`${baseUrl}/create`, categoryData, {

@@ -1,7 +1,20 @@
 {
-  "name": "frontend",
+  "name": "tracker.pingbyleo.space",
+  "keywords": [
+    "pingbyleo",
+    "tracker",
+    "frontend",
+    "react",
+    "vite",
+    "redux",
+    "react-query"
+  ],
   "private": true,
   "proxy": "https://tracker.pingbyleo.space",
+  "description": "Frontend for PingByLeo Space",
+  "author": "Leo",
+  "license": "MIT",
+  "homepage": "https://pingbyleo.space",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

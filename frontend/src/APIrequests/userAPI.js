@@ -3,7 +3,7 @@ import axios from "axios";
 
 import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = `${backendURL}/api/users`;
+const baseUrl = `${backendURL}/users`;
 // ? create User API
 export const registerUserApi = async (userData) => {
   const { data } = await axios.post(`${baseUrl}/register`, userData, {

@@ -2,7 +2,7 @@ import axios from "axios";
 
 import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = `${backendURL}/api/stations`;
+const baseUrl = `${backendURL}/stations`;
 // ? Station
 export const addStationApi = async (stationData) => {
   const { data } = await axios.post(`${baseUrl}/create`, stationData, {

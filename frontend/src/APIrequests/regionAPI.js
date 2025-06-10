@@ -1,7 +1,7 @@
 import axios from "axios";
 import { backendURL } from "../utils/backendURL.js";
 
-const baseUrl = `${backendURL}/api/regions`;
+const baseUrl = `${backendURL}/regions`;
 // ? create region API
 export const addRegionApi = async (regionData) => {
   const { data } = await axios.post(`${baseUrl}/create`, regionData, {
