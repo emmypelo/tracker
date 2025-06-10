@@ -39,14 +39,10 @@ const generateToken = (user) => {
   );
 };
 
-// Enhanced cookie options for Safari compatibility
-const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  const options = {
 // Fixed cookie options for better Safari compatibility
 const getCookieOptions = (req) => {
-  return {
+  const isProduction = process.env.NODE_ENV === "production";
+  const options = {
     httpOnly: true,
     secure: isProduction, // Must be true for SameSite=None in production
     sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production
