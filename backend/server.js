@@ -170,7 +170,7 @@ mongoose
       console.log(
         `CORS enabled for: ${
           process.env.NODE_ENV === "production"
-            ? "https://tracker-pingbyleo.space, https://tracker-rust-zeta.vercel.app"
+            ? "https://tracker.pingbyleo.space, https://tracker-rust-zeta.vercel.app"
             : "localhost:5173"
         }`
       );
