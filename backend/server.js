@@ -22,68 +22,83 @@ const port = process.env.PORT || 5000;
 // Trust proxy (important for Render/Heroku deployments)
 app.set("trust proxy", 1);
 
-// Middleware
-app.use(cookieParser());
-app.use(express.json());
+// CORS MUST BE FIRST - before any other middleware
+const allowedOrigins = [
+  "https://tracker.pingbyleo.space",
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
+];
 
-const allowedOrigins = "https://tracker.pingbyleo.space";
 
-app.use((req, res, next) => {
+app.options("*", (req, res) => {
   const origin = req.headers.origin;
-  const referer = req.headers.referer;
 
-  // Enhanced logging
-  console.log(`\n=== ${req.method} ${req.path} ===`);
-  console.log(`Origin: ${origin || "undefined"}`);
-  console.log(`Referer: ${referer || "undefined"}`);
-  console.log(`Host: ${req.headers.host}`);
-  console.log(
-    `X-Forwarded-For: ${req.headers["x-forwarded-for"] || "undefined"}`
-  );
-  console.log(`User-Agent: ${req.headers["user-agent"]?.substring(0, 50)}...`);
+  console.log(`OPTIONS preflight request from origin: ${origin}`);
 
-  // Always set CORS headers for allowed origins
+  // Set CORS headers for preflight
   if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
-    console.log(`✅ CORS allowed for origin: ${origin}`);
   } else if (!origin) {
     res.header("Access-Control-Allow-Origin", "*");
-    console.log("✅ CORS allowed for request without origin");
-  } else {
-    console.log(`❌ CORS blocked for origin: ${origin}`);
   }
 
-  // Set CORS headers
   res.header(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS, PATCH"
   );
   res.header(
     "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma, X-Forwarded-For"
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma"
   );
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Max-Age", "86400");
 
-  // Handle preflight OPTIONS requests
-  if (req.method === "OPTIONS") {
-    console.log("✅ Handling OPTIONS preflight request");
-    return res.status(200).end();
+  console.log("✅ OPTIONS preflight handled successfully");
+  return res.status(200).end();
+});
+
+// Primary CORS middleware for actual requests
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  console.log(
+    `${req.method} ${req.path} from origin: ${origin || "undefined"}`
+  );
+
+  // Set CORS headers for actual requests
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  } else if (!origin) {
+    res.header("Access-Control-Allow-Origin", "*");
   }
 
-  console.log("=== End Request Log ===\n");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+  );
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma"
+  );
+
   next();
 });
 
-// Backup CORS using cors package
+// NOW add other middleware AFTER CORS
+app.use(cookieParser());
+app.use(express.json());
+
+// Backup CORS using cors package (after manual handling)
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.log(`CORS package blocked origin: ${origin}`);
-        callback(null, false); // Don't throw error, just deny
+        callback(null, false);
       }
     },
     credentials: true,
@@ -96,14 +111,15 @@ app.use(
       "Authorization",
       "Cache-Control",
       "Pragma",
-      "X-Forwarded-For",
     ],
     optionsSuccessStatus: 200,
   })
 );
 
-// Routes
+// Debug middleware AFTER CORS
 app.use(debugMiddleware);
+
+// Routes - AFTER all middleware
 app.use("/api/auth", userRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
@@ -122,20 +138,15 @@ app.get("/health", (req, res) => {
     allowedOrigins: allowedOrigins,
     requestOrigin: req.headers.origin || "No origin header",
     timestamp: new Date().toISOString(),
-    headers: {
-      origin: req.headers.origin,
-      referer: req.headers.referer,
-      host: req.headers.host,
-      userAgent: req.headers["user-agent"]?.substring(0, 100),
-    },
   });
 });
 
-// Simple CORS test endpoint
+// CORS test endpoint
 app.get("/api/cors-test", (req, res) => {
   res.json({
     message: "CORS test successful!",
     origin: req.headers.origin,
+    method: req.method,
     timestamp: new Date().toISOString(),
   });
 });
@@ -163,9 +174,7 @@ mongoose
     app.listen(port, () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`🌐 CORS enabled for origins:`);
-      console.log(allowedOrigins);
-      console.log(`📍 Health check: https://pingbyleo.space/health`);
-      console.log(`🧪 CORS test: https://pingbyleo.space/api/cors-test`);
+      allowedOrigins.forEach((origin) => console.log(`   - ${origin}`));
     });
   })
   .catch((error) => {
