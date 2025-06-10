@@ -45,13 +45,41 @@ const generateToken = (user) => {
   );
 };
 
-// Set cookie options based on environment
+// Enhanced cookie options for Safari compatibility
 const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  const options = {
+    httpOnly: true,
+    secure: isProduction, // Must be true for SameSite=None in production
+    sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/", // Explicitly set path for Safari
+  };
+
+  // Additional Safari-specific configurations for production
+  if (isProduction) {
+    // Uncomment and adjust if your frontend and backend are on different domains
+    // options.domain = ".yourdomain.com";
+
+    // For debugging: log cookie options
+    console.log("Setting cookie with options:", options);
+  }
+
+  return options;
+};
+
+// Alternative cookie clearing function for Safari
+const clearCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Only secure in production
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 0, // Expire immediately
+    expires: new Date(0), // Additional expiry for Safari
   };
 };
 
@@ -138,8 +166,19 @@ const userController = {
       // Generate token for auto-login after registration
       const token = generateToken(newUser);
 
-      // Set token in cookie
-      res.cookie("TrackIt", token, getCookieOptions());
+      // Set token in cookie with Safari-compatible options
+      const cookieOptions = getCookieOptions();
+      res.cookie("TrackIt", token, cookieOptions);
+
+      // Additional Safari compatibility headers
+      if (process.env.NODE_ENV === "production") {
+        res.header(
+          "Set-Cookie",
+          `TrackIt=${token}; ${Object.entries(cookieOptions)
+            .map(([key, value]) => `${key}=${value}`)
+            .join("; ")}`
+        );
+      }
 
       // Remove password from response
       const userResponse = {
@@ -167,7 +206,7 @@ const userController = {
     }
   }),
 
-  
+  // Login user with enhanced Safari support
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -195,8 +234,17 @@ const userController = {
       // Generate JWT token
       const token = generateToken(user);
 
-      // Set token in cookie
-      res.cookie("TrackIt", token, getCookieOptions());
+      // Set token in cookie with Safari-compatible options
+      const cookieOptions = getCookieOptions();
+      res.cookie("TrackIt", token, cookieOptions);
+
+      // Log for debugging in production
+      if (process.env.NODE_ENV === "production") {
+        console.log(
+          "Login successful, cookie set with options:",
+          cookieOptions
+        );
+      }
 
       return sendResponse(res, 200, "success", "Login Success", {
         isAuthenticated: true,
@@ -236,10 +284,9 @@ const userController = {
           { firstname: { $regex: name, $options: "i" } },
           { lastname: { $regex: name, $options: "i" } },
           { email: { $regex: name.toLowerCase(), $options: "i" } },
-          {role: { $regex: name, $options: "i" } }
+          { role: { $regex: name, $options: "i" } },
         ];
       }
-
 
       const users = await User.find(filter)
         .select(
@@ -247,7 +294,7 @@ const userController = {
         )
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 }); 
+        .sort({ createdAt: -1 });
 
       const total = await User.countDocuments(filter);
 
@@ -304,7 +351,7 @@ const userController = {
     }
   }),
 
-  // Check authentication status
+  // Check authentication status with enhanced Safari support
   checkAuthentication: asyncHandler(async (req, res) => {
     // Get token from cookie only
     const token = req.cookies?.TrackIt;
@@ -323,7 +370,7 @@ const userController = {
 
       // Validate that we have a user ID
       if (!userIdFromToken) {
-        res.cookie("TrackIt", "", { maxAge: 1 });
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(
           res,
           401,
@@ -340,7 +387,7 @@ const userController = {
 
       // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(userIdString)) {
-        res.cookie("TrackIt", "", { maxAge: 1 });
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(res, 401, "error", "Invalid user ID format", {
           isAuthenticated: false,
         });
@@ -351,7 +398,7 @@ const userController = {
       );
 
       if (!user) {
-        res.cookie("TrackIt", "", { maxAge: 1 });
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(res, 401, "error", "User not found", {
           isAuthenticated: false,
         });
@@ -376,8 +423,8 @@ const userController = {
         role: user.role || "user",
       });
     } catch (error) {
-      // Clear invalid token
-      res.cookie("TrackIt", "", { maxAge: 1 });
+      // Clear invalid token with Safari-compatible options
+      res.cookie("TrackIt", "", clearCookieOptions());
 
       // Handle specific JWT errors
       if (error.name === "JsonWebTokenError") {
@@ -401,14 +448,20 @@ const userController = {
     }
   }),
 
-  // User logout
+  // User logout with enhanced Safari support
   logout: asyncHandler(async (req, res) => {
-    res.cookie("TrackIt", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1, // Expire immediately
-    });
+    // Clear cookie with Safari-compatible options
+    res.cookie("TrackIt", "", clearCookieOptions());
+
+    // Additional Safari compatibility - set multiple clear attempts
+    if (process.env.NODE_ENV === "production") {
+      res.clearCookie("TrackIt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+      });
+    }
 
     return sendResponse(res, 200, "success", "Logged out successfully");
   }),
@@ -472,7 +525,7 @@ const userController = {
     }
   }),
 
-  // Reset password
+  // Reset password with enhanced Safari cookie support
   resetPassword: asyncHandler(async (req, res) => {
     const { verifyToken } = req.params;
     const { password, confirmPassword } = req.body;
@@ -586,14 +639,9 @@ const userController = {
         return sendResponse(res, 404, "error", "User not found");
       }
 
-      // If user deletes their own account, log them out
+      // If user deletes their own account, log them out with Safari-compatible options
       if (currentUser._id.toString() === userId) {
-        res.cookie("TrackIt", "", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-          maxAge: 1,
-        });
+        res.cookie("TrackIt", "", clearCookieOptions());
       }
 
       return sendResponse(res, 200, "success", "User deleted successfully");
@@ -797,7 +845,7 @@ const userController = {
     }
   }),
 
-  // Change password (for authenticated users)
+  // Change password (for authenticated users) with enhanced Safari support
   changePassword: asyncHandler(async (req, res) => {
     try {
       const { userId } = req.params;
@@ -884,8 +932,6 @@ const userController = {
       );
     }
   }),
-
-
 };
 
 export default userController;
