@@ -39,16 +39,13 @@ const generateToken = (user) => {
   );
 };
 
-// Simplified cookie options - let server handle CORS
-const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === "production";
-
+// Fixed cookie options for better Safari compatibility
+const getCookieOptions = (req) => {
   return {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "None" : "Lax",
+    secure: true,
+    sameSite: "None",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/",
   };
 };
 
@@ -134,8 +131,8 @@ const userController = {
       // Generate token for auto-login after registration
       const token = generateToken(newUser);
 
-      // Set token in cookie - server CORS handles the headers
-      res.cookie("TrackIt", token, getCookieOptions());
+      // Set token in cookie with improved options
+      res.cookie("TrackIt", token, getCookieOptions(req));
 
       // Remove password from response
       const userResponse = {
@@ -163,7 +160,7 @@ const userController = {
     }
   }),
 
-  // Login user
+  // Login user with improved cookie handling
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -191,10 +188,22 @@ const userController = {
       const token = generateToken(user);
 
       // Clear any existing cookie first
-      res.clearCookie("TrackIt", getCookieOptions());
+      res.clearCookie("TrackIt", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/",
+      });
 
-      // Set new token in cookie
-      res.cookie("TrackIt", token, getCookieOptions());
+      // Set new token in cookie with improved options
+      res.cookie("TrackIt", token, getCookieOptions(req));
+
+      // Also set CORS headers if needed
+      const origin = req.get("origin");
+      if (origin) {
+        res.header("Access-Control-Allow-Credentials", "true");
+        res.header("Access-Control-Allow-Origin", origin);
+      }
 
       return sendResponse(res, 200, "success", "Login Success", {
         isAuthenticated: true,
@@ -217,7 +226,7 @@ const userController = {
     }
   }),
 
-  // Authentication check
+  // Improved authentication check
   checkAuthentication: asyncHandler(async (req, res) => {
     // Get token from cookie with fallback to Authorization header
     let token = req.cookies?.TrackIt;
@@ -242,7 +251,8 @@ const userController = {
       const userIdFromToken = decodedUser.id;
 
       if (!userIdFromToken) {
-        res.clearCookie("TrackIt", getCookieOptions());
+        // Clear invalid cookie
+        res.clearCookie("TrackIt", getCookieOptions(req));
         return sendResponse(
           res,
           401,
@@ -255,7 +265,7 @@ const userController = {
       const userIdString = String(userIdFromToken);
 
       if (!mongoose.Types.ObjectId.isValid(userIdString)) {
-        res.clearCookie("TrackIt", getCookieOptions());
+        res.clearCookie("TrackIt", getCookieOptions(req));
         return sendResponse(res, 401, "error", "Invalid user ID format", {
           isAuthenticated: false,
         });
@@ -266,7 +276,7 @@ const userController = {
       );
 
       if (!user) {
-        res.clearCookie("TrackIt", getCookieOptions());
+        res.clearCookie("TrackIt", getCookieOptions(req));
         return sendResponse(res, 401, "error", "User not found", {
           isAuthenticated: false,
         });
@@ -279,7 +289,7 @@ const userController = {
 
       if (tokenExp.getTime() - now.getTime() < oneDay) {
         const newToken = generateToken(user);
-        res.cookie("TrackIt", newToken, getCookieOptions());
+        res.cookie("TrackIt", newToken, getCookieOptions(req));
       }
 
       return sendResponse(res, 200, "success", "User is authenticated", {
@@ -292,7 +302,7 @@ const userController = {
       });
     } catch (error) {
       // Clear invalid token
-      res.clearCookie("TrackIt", getCookieOptions());
+      res.clearCookie("TrackIt", getCookieOptions(req));
 
       if (error.name === "JsonWebTokenError") {
         return sendResponse(res, 401, "error", "Invalid authentication token", {
@@ -315,15 +325,33 @@ const userController = {
     }
   }),
 
-  // Logout
+  // Improved logout
   logout: asyncHandler(async (req, res) => {
-    // Clear cookie - server CORS handles the headers
-    res.clearCookie("TrackIt", getCookieOptions());
+    // Clear cookie with same options used to set it
+    res.clearCookie("TrackIt", getCookieOptions(req));
+
+    // Also clear with different sameSite values to ensure compatibility
+    res.clearCookie("TrackIt", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
+    res.clearCookie("TrackIt", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      path: "/",
+    });
 
     return sendResponse(res, 200, "success", "Logged out successfully");
   }),
 
-  // Reset password
+  // ... (rest of your methods remain the same)
+  // I'm including the key methods that needed cookie fixes
+
+  // Reset password with improved cookie handling
   resetPassword: asyncHandler(async (req, res) => {
     const { verifyToken } = req.params;
     const { password, confirmPassword } = req.body;
@@ -379,7 +407,7 @@ const userController = {
 
       // Generate a new token and log the user in automatically
       const token = generateToken(userFound);
-      res.cookie("TrackIt", token, getCookieOptions());
+      res.cookie("TrackIt", token, getCookieOptions(req));
 
       return sendResponse(res, 200, "success", "Password successfully reset", {
         isAuthenticated: true,
