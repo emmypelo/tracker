@@ -75,7 +75,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use(debugMiddleware);
-app.use("/api/auth", userRouter);
+// app.use("/api/users", userRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
 app.use("/api/category", categoryRouter);

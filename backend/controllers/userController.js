@@ -45,26 +45,16 @@ const generateToken = (user) => {
   );
 };
 
-// Enhanced cookie options for Safari compatibility
 const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === "production" || true;
+  const isProduction = process.env.NODE_ENV === "production";
 
   const options = {
     httpOnly: true,
-    secure: isProduction, // Must be true for SameSite=None in production
-    sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/", // Explicitly set path for Safari
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
   };
-
-  // Additional Safari-specific configurations for production
-  if (isProduction) {
-   
-    options.domain = "tracker-rust-zeta.vercel.app"; 
-
-  
-    console.log("Setting cookie with options:", options);
-  }
 
   return options;
 };
