@@ -163,7 +163,7 @@ mongoose
     app.listen(port, () => {
       console.log(`🚀 Server is running on port ${port}`);
       console.log(`🌐 CORS enabled for origins:`);
-      allowedOrigins.forEach((origin) => console.log(`   - ${origin}`));
+      console.log(allowedOrigins);
       console.log(`📍 Health check: https://pingbyleo.space/health`);
       console.log(`🧪 CORS test: https://pingbyleo.space/api/cors-test`);
     });
