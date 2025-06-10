@@ -47,13 +47,17 @@ const generateToken = (user) => {
 
 // Set cookie options based on environment
 const getCookieOptions = () => {
+  const isProd = process.env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production", // Only secure in production
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin in production
+    secure: isProd, // Needed for SameSite=None
+    sameSite: isProd ? "none" : "lax", // None required for cross-origin
+    domain: isProd ? ".pingbyleo.space" : undefined, // Share across subdomains
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   };
 };
+
 
 const userController = {
   // Check if user exists

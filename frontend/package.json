@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "proxy": "https://tracker-rust-zeta.vercel.app",
+  "proxy": "https://tracker.pingbyleo.space",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
