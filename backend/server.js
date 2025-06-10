@@ -19,14 +19,16 @@ import { debugMiddleware } from "./middlewares/debugMiddleware.js";
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Trust proxy for production (essential for Safari cookies)
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
+// Middleware
 app.use(cookieParser());
 app.use(express.json());
 
-// Enhanced CORS configuration for Safari compatibility
+// Enhanced CORS configuration specifically for Safari cookie storage
 const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins =
@@ -34,6 +36,7 @@ const corsOptions = {
         ? ["https://tracker-rust-zeta.vercel.app"]
         : ["http://localhost:5173", "http://127.0.0.1:5173"];
 
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -53,29 +56,46 @@ const corsOptions = {
     "Origin",
     "Cache-Control",
     "Pragma",
+    "X-Safari-Cookie-Fix", // Custom header for Safari detection
   ],
-  exposedHeaders: ["Set-Cookie"],
-  optionsSuccessStatus: 200, 
+  exposedHeaders: ["Set-Cookie", "X-Safari-Cookie-Fix"],
+  optionsSuccessStatus: 200,
   preflightContinue: false,
 };
 
 app.use(cors(corsOptions));
 
-// Handle preflight requests explicitly for better Safari support
+// Handle preflight requests explicitly
 app.options("*", cors(corsOptions));
 
+// Safari-specific middleware for cookie storage issues
 app.use((req, res, next) => {
-  
+  const userAgent = req.get("User-Agent") || "";
+  const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+
   if (process.env.NODE_ENV === "production") {
+    // Set additional headers for Safari compatibility
     res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Vary", "Origin");
+    res.header("Vary", "Origin, User-Agent");
+
+    // Safari-specific headers
+    if (isSafari) {
+      res.header("X-Safari-Cookie-Fix", "enabled");
+      // Prevent caching of authentication responses in Safari
+      res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.header("Pragma", "no-cache");
+      res.header("Expires", "0");
+    }
   }
+
+  // Store Safari detection for use in controllers
+  req.isSafari = isSafari;
   next();
 });
 
 // Routes
 app.use(debugMiddleware);
-// app.use("/api/users", userRouter);
+app.use("/api/auth", userRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
 app.use("/api/category", categoryRouter);
@@ -84,6 +104,26 @@ app.use("/api/regions", regionRouter);
 app.use("/api/reportcategory", reportCategoryRouter);
 app.use("/api/stations", stationRouter);
 app.use("/api/reports", reportRouter);
+
+// Safari cookie test endpoint
+app.get("/api/safari-cookie-test", (req, res) => {
+  const testCookie = "safari-test-" + Date.now();
+
+  res.cookie("SafariTest", testCookie, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 60000, // 1 minute
+    path: "/",
+  });
+
+  res.json({
+    message: "Safari cookie test",
+    userAgent: req.get("User-Agent"),
+    isSafari: req.isSafari,
+    cookieSet: testCookie,
+  });
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -103,7 +143,6 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error("Server error:", err);
 
-  // Handle CORS errors specifically
   if (err.message === "Not allowed by CORS") {
     return res.status(403).json({
       status: "error",

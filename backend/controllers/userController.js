@@ -13,17 +13,12 @@ import { sendResponse } from "../utilities/sendResponse.js";
 // Helper function to safely convert any ID format to a valid ObjectId string
 const safeObjectId = (id) => {
   try {
-    // If id is a Buffer, convert to string
     if (Buffer.isBuffer(id)) {
       id = id.toString("hex");
     }
-
-    // If id is already a valid ObjectId, return its string representation
     if (mongoose.Types.ObjectId.isValid(id)) {
       return id.toString();
     }
-
-    // If we have a string that's not in ObjectId format, return null
     return null;
   } catch (error) {
     return null;
@@ -40,37 +35,103 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "7d", 
+      expiresIn: "7d",
     }
   );
 };
 
-const getCookieOptions = () => {
+// Safari-specific cookie options to force storage
+const getCookieOptions = (req = null) => {
   const isProduction = process.env.NODE_ENV === "production";
+  const isSafari = req?.isSafari || false;
 
-  const options = {
+  const baseOptions = {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
   };
 
-  return options;
+  // Safari-specific modifications
+  if (isProduction && isSafari) {
+    // For Safari, try with partitioned attribute for third-party cookies
+    baseOptions.partitioned = true;
+
+    // Shorter maxAge for Safari to avoid ITP issues
+    baseOptions.maxAge = 24 * 60 * 60 * 1000; // 1 day for Safari
+
+    console.log("Safari detected - using partitioned cookies");
+  }
+
+  return baseOptions;
 };
 
-// Alternative cookie clearing function for Safari
-const clearCookieOptions = () => {
+// Alternative cookie options without partitioned (fallback)
+const getFallbackCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
 
   return {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
-    maxAge: 0, 
-    expires: new Date(0), 
+    // No partitioned attribute
   };
+};
+
+// Enhanced cookie clearing for Safari
+const clearCookieOptions = (req = null) => {
+  const isProduction = process.env.NODE_ENV === "production";
+  const isSafari = req?.isSafari || false;
+
+  const clearOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  };
+
+  if (isProduction && isSafari) {
+    clearOptions.partitioned = true;
+  }
+
+  return clearOptions;
+};
+
+// Safari cookie setting helper with multiple attempts
+const setSafariCompatibleCookie = (res, req, name, value) => {
+  const isProduction = process.env.NODE_ENV === "production";
+  const isSafari = req?.isSafari || false;
+
+  if (isProduction && isSafari) {
+    // Try multiple cookie setting strategies for Safari
+
+    // Strategy 1: With partitioned attribute
+    try {
+      res.cookie(name, value, getCookieOptions(req));
+    } catch (error) {
+      console.log("Partitioned cookie failed, trying fallback");
+    }
+
+    // Strategy 2: Without partitioned (fallback)
+    res.cookie(name + "_fallback", value, getFallbackCookieOptions());
+
+    // Strategy 3: Manual Set-Cookie header
+    const cookieString = `${name}=${value}; HttpOnly; Secure; SameSite=None; Path=/; Max-Age=${
+      7 * 24 * 60 * 60
+    }`;
+    res.setHeader(
+      "Set-Cookie",
+      [res.getHeader("Set-Cookie") || [], cookieString].flat().filter(Boolean)
+    );
+  } else {
+    // Standard cookie setting for non-Safari browsers
+    res.cookie(name, value, getCookieOptions(req));
+  }
 };
 
 const userController = {
@@ -101,7 +162,7 @@ const userController = {
     }
   }),
 
-  // Create a new user
+  // Create a new user with Safari cookie fix
   createUser: asyncHandler(async (req, res) => {
     const { firstname, lastname, email, password, passmatch } = req.body;
 
@@ -132,7 +193,6 @@ const userController = {
     }
 
     try {
-      // Convert email to lowercase
       const lowerCaseEmail = email.toLowerCase();
 
       // Check if user already exists
@@ -142,7 +202,7 @@ const userController = {
       }
 
       // Hash password
-      const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
+      const salt = await bcrypt.genSalt(12);
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Create new user
@@ -156,18 +216,13 @@ const userController = {
       // Generate token for auto-login after registration
       const token = generateToken(newUser);
 
-      // Set token in cookie with Safari-compatible options
-      const cookieOptions = getCookieOptions();
-      res.cookie("TrackIt", token, cookieOptions);
+      // Set cookie with Safari compatibility
+      setSafariCompatibleCookie(res, req, "TrackIt", token);
 
-      // Additional Safari compatibility headers
+      // Log for debugging
       if (process.env.NODE_ENV === "production") {
-        res.header(
-          "Set-Cookie",
-          `TrackIt=${token}; ${Object.entries(cookieOptions)
-            .map(([key, value]) => `${key}=${value}`)
-            .join("; ")}`
-        );
+        console.log("User created, Safari detected:", req.isSafari);
+        console.log("Cookie options used:", getCookieOptions(req));
       }
 
       // Remove password from response
@@ -182,7 +237,8 @@ const userController = {
       return sendResponse(res, 201, "success", "User created successfully", {
         user: userResponse,
         isAuthenticated: true,
-        token: process.env.NODE_ENV === "development" ? token : undefined, // Only include token in development
+        safariDetected: req.isSafari,
+        token: process.env.NODE_ENV === "development" ? token : undefined,
       });
     } catch (error) {
       return sendResponse(
@@ -196,7 +252,7 @@ const userController = {
     }
   }),
 
-  // Login user with enhanced Safari support
+  // Login user with enhanced Safari cookie storage
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -206,7 +262,6 @@ const userController = {
     }
 
     try {
-      // Convert email to lowercase
       const lowerCaseEmail = email.toLowerCase();
 
       // Find user by email
@@ -224,16 +279,13 @@ const userController = {
       // Generate JWT token
       const token = generateToken(user);
 
-      // Set token in cookie with Safari-compatible options
-      const cookieOptions = getCookieOptions();
-      res.cookie("TrackIt", token, cookieOptions);
+      // Set cookie with Safari compatibility
+      setSafariCompatibleCookie(res, req, "TrackIt", token);
 
-      // Log for debugging in production
-      if (process.env.NODE_ENV === "production") {
-        console.log(
-          "Login successful, cookie set with options:",
-          cookieOptions
-        );
+      // Additional Safari debugging
+      if (process.env.NODE_ENV === "production" && req.isSafari) {
+        console.log("Safari login - multiple cookie strategies applied");
+        console.log("User-Agent:", req.get("User-Agent"));
       }
 
       return sendResponse(res, 200, "success", "Login Success", {
@@ -243,6 +295,8 @@ const userController = {
         email: user.email,
         _id: user._id,
         role: user.role || "user",
+        safariDetected: req.isSafari,
+        cookieStrategies: req.isSafari ? "multiple" : "standard",
         token: process.env.NODE_ENV === "development" ? token : undefined,
       });
     } catch (error) {
@@ -257,10 +311,135 @@ const userController = {
     }
   }),
 
-  // Fetch all users
+  // Enhanced authentication check with Safari fallback
+  checkAuthentication: asyncHandler(async (req, res) => {
+    // Try multiple cookie sources for Safari compatibility
+    const token = req.cookies?.TrackIt || req.cookies?.TrackIt_fallback;
+
+    if (!token) {
+      return sendResponse(res, 401, "error", "User is not authenticated", {
+        isAuthenticated: false,
+        safariDetected: req.isSafari,
+      });
+    }
+
+    try {
+      const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+      const userIdFromToken = decodedUser.id;
+
+      if (!userIdFromToken) {
+        // Clear all cookie variants
+        res.cookie("TrackIt", "", clearCookieOptions(req));
+        res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
+        return sendResponse(
+          res,
+          401,
+          "error",
+          "Invalid token: missing user ID",
+          {
+            isAuthenticated: false,
+          }
+        );
+      }
+
+      const userIdString = String(userIdFromToken);
+
+      if (!mongoose.Types.ObjectId.isValid(userIdString)) {
+        res.cookie("TrackIt", "", clearCookieOptions(req));
+        res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
+        return sendResponse(res, 401, "error", "Invalid user ID format", {
+          isAuthenticated: false,
+        });
+      }
+
+      const user = await User.findById(userIdString).select(
+        "-password -authMethod -passwordResetToken -passwordResetExpires"
+      );
+
+      if (!user) {
+        res.cookie("TrackIt", "", clearCookieOptions(req));
+        res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
+        return sendResponse(res, 401, "error", "User not found", {
+          isAuthenticated: false,
+        });
+      }
+
+      // Refresh token if close to expiry
+      const tokenExp = new Date(decodedUser.exp * 1000);
+      const now = new Date();
+      const oneDay = 24 * 60 * 60 * 1000;
+
+      if (tokenExp.getTime() - now.getTime() < oneDay) {
+        const newToken = generateToken(user);
+        setSafariCompatibleCookie(res, req, "TrackIt", newToken);
+      }
+
+      return sendResponse(res, 200, "success", "User is authenticated", {
+        isAuthenticated: true,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        _id: user._id,
+        role: user.role || "user",
+        safariDetected: req.isSafari,
+        cookieSource: req.cookies?.TrackIt ? "primary" : "fallback",
+      });
+    } catch (error) {
+      // Clear all cookie variants
+      res.cookie("TrackIt", "", clearCookieOptions(req));
+      res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
+
+      if (error.name === "JsonWebTokenError") {
+        return sendResponse(res, 401, "error", "Invalid authentication token", {
+          isAuthenticated: false,
+        });
+      } else if (error.name === "TokenExpiredError") {
+        return sendResponse(res, 401, "error", "Authentication token expired", {
+          isAuthenticated: false,
+        });
+      }
+
+      return sendResponse(
+        res,
+        401,
+        "error",
+        "Authentication failed",
+        { isAuthenticated: false },
+        error.message
+      );
+    }
+  }),
+
+  // Enhanced logout with Safari cookie clearing
+  logout: asyncHandler(async (req, res) => {
+    // Clear all cookie variants for Safari
+    res.cookie("TrackIt", "", clearCookieOptions(req));
+    res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
+
+    // Additional clearing methods for Safari
+    if (process.env.NODE_ENV === "production") {
+      res.clearCookie("TrackIt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+      });
+      res.clearCookie("TrackIt_fallback", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+      });
+    }
+
+    return sendResponse(res, 200, "success", "Logged out successfully", {
+      safariDetected: req.isSafari,
+    });
+  }),
+
+  // Fetch all users (unchanged)
   fetchAllUsers: asyncHandler(async (req, res) => {
     try {
-      // Add pagination
       const page = Number.parseInt(req.query.page) || 1;
       const limit = Number.parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
@@ -268,7 +447,6 @@ const userController = {
       const { name } = req.query;
       const filter = {};
 
-      // Enhanced filtering options
       if (name) {
         filter.$or = [
           { firstname: { $regex: name, $options: "i" } },
@@ -309,7 +487,7 @@ const userController = {
     }
   }),
 
-  // Fetch a user
+  // Fetch a user (unchanged)
   fetchAUser: asyncHandler(async (req, res) => {
     try {
       const userId = req.params.userId;
@@ -341,122 +519,7 @@ const userController = {
     }
   }),
 
-  // Check authentication status with enhanced Safari support
-  checkAuthentication: asyncHandler(async (req, res) => {
-    // Get token from cookie only
-    const token = req.cookies?.TrackIt;
-
-    if (!token) {
-      return sendResponse(res, 401, "error", "User is not authenticated", {
-        isAuthenticated: false,
-      });
-    }
-
-    try {
-      // Verify the JWT token
-      const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
-
-      const userIdFromToken = decodedUser.id;
-
-      // Validate that we have a user ID
-      if (!userIdFromToken) {
-        res.cookie("TrackIt", "", clearCookieOptions());
-        return sendResponse(
-          res,
-          401,
-          "error",
-          "Invalid token: missing user ID",
-          {
-            isAuthenticated: false,
-          }
-        );
-      }
-
-      // Convert to string and validate ObjectId format
-      const userIdString = String(userIdFromToken);
-
-      // Validate ObjectId format
-      if (!mongoose.Types.ObjectId.isValid(userIdString)) {
-        res.cookie("TrackIt", "", clearCookieOptions());
-        return sendResponse(res, 401, "error", "Invalid user ID format", {
-          isAuthenticated: false,
-        });
-      }
-
-      const user = await User.findById(userIdString).select(
-        "-password -authMethod -passwordResetToken -passwordResetExpires"
-      );
-
-      if (!user) {
-        res.cookie("TrackIt", "", clearCookieOptions());
-        return sendResponse(res, 401, "error", "User not found", {
-          isAuthenticated: false,
-        });
-      }
-
-      // Refresh token if it's close to expiry
-      const tokenExp = new Date(decodedUser.exp * 1000);
-      const now = new Date();
-      const oneDay = 24 * 60 * 60 * 1000;
-
-      if (tokenExp.getTime() - now.getTime() < oneDay) {
-        const newToken = generateToken(user);
-        res.cookie("TrackIt", newToken, getCookieOptions());
-      }
-
-      return sendResponse(res, 200, "success", "User is authenticated", {
-        isAuthenticated: true,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        email: user.email,
-        _id: user._id,
-        role: user.role || "user",
-      });
-    } catch (error) {
-      // Clear invalid token with Safari-compatible options
-      res.cookie("TrackIt", "", clearCookieOptions());
-
-      // Handle specific JWT errors
-      if (error.name === "JsonWebTokenError") {
-        return sendResponse(res, 401, "error", "Invalid authentication token", {
-          isAuthenticated: false,
-        });
-      } else if (error.name === "TokenExpiredError") {
-        return sendResponse(res, 401, "error", "Authentication token expired", {
-          isAuthenticated: false,
-        });
-      }
-
-      return sendResponse(
-        res,
-        401,
-        "error",
-        "Authentication failed",
-        { isAuthenticated: false },
-        error.message
-      );
-    }
-  }),
-
-  // User logout with enhanced Safari support
-  logout: asyncHandler(async (req, res) => {
-    // Clear cookie with Safari-compatible options
-    res.cookie("TrackIt", "", clearCookieOptions());
-
-    // Additional Safari compatibility - set multiple clear attempts
-    if (process.env.NODE_ENV === "production") {
-      res.clearCookie("TrackIt", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        path: "/",
-      });
-    }
-
-    return sendResponse(res, 200, "success", "Logged out successfully");
-  }),
-
-  // Forgot password (sending email token)
+  // Forgot password (unchanged)
   forgotPassword: asyncHandler(async (req, res) => {
     const { email } = req.body;
 
@@ -465,13 +528,9 @@ const userController = {
     }
 
     try {
-      // Convert email to lowercase
       const lowerCaseEmail = email.toLowerCase();
-
-      // Find the user
       const user = await User.findOne({ email: lowerCaseEmail });
       if (!user) {
-        // For security reasons, don't reveal if user exists or not
         return sendResponse(
           res,
           200,
@@ -480,13 +539,8 @@ const userController = {
         );
       }
 
-      // Use the method from the model
       const token = await user.generatePasswordResetToken();
-
-      // Save the user
       await user.save();
-
-      // Send the email
       await sendPasswordMail(user.email, token);
 
       return sendResponse(
@@ -496,7 +550,6 @@ const userController = {
         `If a user with that email exists, a password reset link has been sent`
       );
     } catch (error) {
-      // More specific error handling
       if (error.message.includes("Gmail authentication")) {
         return sendResponse(
           res,
@@ -505,7 +558,6 @@ const userController = {
           "Email service configuration error. Please contact support."
         );
       }
-
       return sendResponse(
         res,
         500,
@@ -515,7 +567,7 @@ const userController = {
     }
   }),
 
-  // Reset password with enhanced Safari cookie support
+  // Reset password with Safari cookie support
   resetPassword: asyncHandler(async (req, res) => {
     const { verifyToken } = req.params;
     const { password, confirmPassword } = req.body;
@@ -548,7 +600,6 @@ const userController = {
         .update(verifyToken)
         .digest("hex");
 
-      // Find the user
       const userFound = await User.findOne({
         passwordResetToken: cryptoToken,
         passwordResetExpires: { $gt: Date.now() },
@@ -568,15 +619,15 @@ const userController = {
       userFound.passwordResetToken = null;
       userFound.passwordResetExpires = null;
 
-      // Save the user
       await userFound.save();
 
-      // Generate a new token and log the user in automatically
+      // Generate new token and set with Safari compatibility
       const token = generateToken(userFound);
-      res.cookie("TrackIt", token, getCookieOptions());
+      setSafariCompatibleCookie(res, req, "TrackIt", token);
 
       return sendResponse(res, 200, "success", "Password successfully reset", {
         isAuthenticated: true,
+        safariDetected: req.isSafari,
       });
     } catch (error) {
       return sendResponse(
@@ -590,7 +641,7 @@ const userController = {
     }
   }),
 
-  // Delete a user (only user or admin)
+  // Delete user with Safari cookie clearing
   deleteUser: asyncHandler(async (req, res) => {
     try {
       const { userId } = req.params;
@@ -599,19 +650,16 @@ const userController = {
         return sendResponse(res, 400, "error", "User ID is required");
       }
 
-      // Safely convert the authenticated user ID to a valid ObjectId string
       const currentUserId = safeObjectId(req.user.id);
       if (!currentUserId) {
         return sendResponse(res, 401, "error", "Invalid authentication");
       }
 
-      // First, get the current authenticated user with complete details
       const currentUser = await User.findById(currentUserId);
       if (!currentUser) {
         return sendResponse(res, 401, "error", "Authentication failed");
       }
 
-      // Ensure only the user themselves or an admin can delete
       if (
         currentUser.role !== "admin" &&
         currentUser._id.toString() !== userId
@@ -629,9 +677,10 @@ const userController = {
         return sendResponse(res, 404, "error", "User not found");
       }
 
-      // If user deletes their own account, log them out with Safari-compatible options
+      // If user deletes their own account, clear all cookies
       if (currentUser._id.toString() === userId) {
-        res.cookie("TrackIt", "", clearCookieOptions());
+        res.cookie("TrackIt", "", clearCookieOptions(req));
+        res.cookie("TrackIt_fallback", "", clearCookieOptions(req));
       }
 
       return sendResponse(res, 200, "success", "User deleted successfully");
@@ -647,7 +696,7 @@ const userController = {
     }
   }),
 
-  // Edit personal profile (only the user themselves or an admin)
+  // Edit user profile (unchanged)
   editUserProfile: asyncHandler(async (req, res) => {
     try {
       const { userId } = req.params;
@@ -656,25 +705,21 @@ const userController = {
         return sendResponse(res, 400, "error", "User ID is required");
       }
 
-      // First, check if the user exists
       const userToEdit = await User.findById(userId);
       if (!userToEdit) {
         return sendResponse(res, 404, "error", "User not found");
       }
 
-      // Safely convert the authenticated user ID to a valid ObjectId string
       const currentUserId = safeObjectId(req.user.id);
       if (!currentUserId) {
         return sendResponse(res, 401, "error", "Invalid authentication");
       }
 
-      // Get the complete details of the authenticated user
       const currentUser = await User.findById(currentUserId);
       if (!currentUser) {
         return sendResponse(res, 401, "error", "Authentication failed");
       }
 
-      // Check authorization: Only the user themselves or an admin can edit
       const isOwnProfile = currentUser._id.toString() === userId;
       const isAdmin = currentUser.role === "admin";
 
@@ -687,16 +732,12 @@ const userController = {
         );
       }
 
-      // Validate input data
       const { firstname, lastname, email } = req.body;
-
-      // Create an object with only the fields that should be updated
       const updateData = {};
 
       if (firstname) updateData.firstname = firstname;
       if (lastname) updateData.lastname = lastname;
 
-      // Only allow email change if it's not already taken
       if (email && email !== userToEdit.email) {
         const lowerCaseEmail = email.toLowerCase();
         const emailExists = await User.findOne({
@@ -706,10 +747,9 @@ const userController = {
         if (emailExists) {
           return sendResponse(res, 400, "error", "Email is already in use");
         }
-        updateData.email = lowerCaseEmail; // Use lowercase email
+        updateData.email = lowerCaseEmail;
       }
 
-      // Update the user
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $set: updateData },
@@ -733,22 +773,19 @@ const userController = {
     }
   }),
 
-  // Admin-only edit user profile
+  // Admin edit user (unchanged)
   adminEditUser: asyncHandler(async (req, res) => {
     try {
-      // Safely convert the authenticated user ID to a valid ObjectId string
       const currentUserId = safeObjectId(req.user.id);
       if (!currentUserId) {
         return sendResponse(res, 401, "error", "Invalid authentication");
       }
 
-      // Get the complete details of the authenticated user
       const currentUser = await User.findById(currentUserId);
       if (!currentUser) {
         return sendResponse(res, 401, "error", "Authentication failed");
       }
 
-      // Check if the current user is an admin
       if (currentUser.role !== "admin") {
         return sendResponse(res, 403, "error", "Unauthorized: Admins only");
       }
@@ -759,22 +796,17 @@ const userController = {
         return sendResponse(res, 400, "error", "User ID is required");
       }
 
-      // Check if user exists
       const userToEdit = await User.findById(userId);
       if (!userToEdit) {
         return sendResponse(res, 404, "error", "User not found");
       }
 
-      // Validate and sanitize input data
       const { firstname, lastname, email, role } = req.body;
-
-      // Create an object with only the fields that should be updated
       const updateData = {};
 
       if (firstname) updateData.firstname = firstname;
       if (lastname) updateData.lastname = lastname;
 
-      // Only allow email change if it's not already taken
       if (email && email !== userToEdit.email) {
         const lowerCaseEmail = email.toLowerCase();
         const emailExists = await User.findOne({
@@ -784,18 +816,15 @@ const userController = {
         if (emailExists) {
           return sendResponse(res, 400, "error", "Email is already in use");
         }
-        updateData.email = lowerCaseEmail; // Use lowercase email
+        updateData.email = lowerCaseEmail;
       }
 
-      // Only admins can change roles
       if (role) {
-        // Validate role is one of the allowed values
         const allowedRoles = ["user", "admin", "manager"];
         if (!allowedRoles.includes(role)) {
           return sendResponse(res, 400, "error", "Invalid role specified");
         }
 
-        // Prevent changing the role of the last admin
         if (userToEdit.role === "admin" && role !== "admin") {
           const adminCount = await User.countDocuments({ role: "admin" });
           if (adminCount <= 1) {
@@ -811,7 +840,6 @@ const userController = {
         updateData.role = role;
       }
 
-      // Update the user
       const updatedUser = await User.findByIdAndUpdate(
         userId,
         { $set: updateData },
@@ -835,13 +863,12 @@ const userController = {
     }
   }),
 
-  // Change password (for authenticated users) with enhanced Safari support
+  // Change password with Safari cookie support
   changePassword: asyncHandler(async (req, res) => {
     try {
       const { userId } = req.params;
       const { currentPassword, newPassword, confirmPassword } = req.body;
 
-      // Validate input
       if (!currentPassword || !newPassword || !confirmPassword) {
         return sendResponse(
           res,
@@ -864,19 +891,16 @@ const userController = {
         );
       }
 
-      // Safely convert the authenticated user ID to a valid ObjectId string
       const currentUserId = safeObjectId(req.user.id);
       if (!currentUserId) {
         return sendResponse(res, 401, "error", "Invalid authentication");
       }
 
-      // Get the complete details of the authenticated user
       const currentUser = await User.findById(currentUserId);
       if (!currentUser) {
         return sendResponse(res, 401, "error", "Authentication failed");
       }
 
-      // Authorization check
       if (
         currentUser._id.toString() !== userId &&
         currentUser.role !== "admin"
@@ -889,28 +913,33 @@ const userController = {
         );
       }
 
-      // Find the user
       const user = await User.findById(userId);
       if (!user) {
         return sendResponse(res, 404, "error", "User not found");
       }
 
-      // Verify current password
       const isMatch = await bcrypt.compare(currentPassword, user.password);
       if (!isMatch) {
         return sendResponse(res, 400, "error", "Current password is incorrect");
       }
 
-      // Hash and update password
       const salt = await bcrypt.genSalt(12);
       user.password = await bcrypt.hash(newPassword, salt);
       await user.save();
 
-      // Generate a new token with updated credentials
+      // Generate new token and set with Safari compatibility
       const token = generateToken(user);
-      res.cookie("TrackIt", token, getCookieOptions());
+      setSafariCompatibleCookie(res, req, "TrackIt", token);
 
-      return sendResponse(res, 200, "success", "Password changed successfully");
+      return sendResponse(
+        res,
+        200,
+        "success",
+        "Password changed successfully",
+        {
+          safariDetected: req.isSafari,
+        }
+      );
     } catch (error) {
       return sendResponse(
         res,
