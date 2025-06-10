@@ -33,7 +33,10 @@ const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins =
       process.env.NODE_ENV === "production"
-        ? ["https://tracker-rust-zeta.vercel.app"]
+        ? [
+            "https://tracker.pingbyleo.space",
+            "https://tracker-rust-zeta.vercel.app",
+          ]
         : ["http://localhost:5173", "http://127.0.0.1:5173"];
 
     // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -167,7 +170,7 @@ mongoose
       console.log(
         `CORS enabled for: ${
           process.env.NODE_ENV === "production"
-            ? "https://tracker-rust-zeta.vercel.app"
+            ? "https://tracker-pingbyleo.space, https://tracker-rust-zeta.vercel.app"
             : "localhost:5173"
         }`
       );

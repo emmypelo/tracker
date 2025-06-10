@@ -1,4 +1,4 @@
 export const backendURL =
   import.meta.env.MODE === "production"
-    ? "https://tracker-8g9y.onrender.com"
+    ? "https://tracker.pingbyleo.space"
     : "http://localhost:3000";
