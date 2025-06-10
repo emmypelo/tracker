@@ -16,6 +16,7 @@ import reportCategoryRouter from "./routers/reportCategoryRouter.js";
 import stationRouter from "./routers/stationRouter.js";
 import reportRouter from "./routers/reportRouter.js";
 import { debugMiddleware } from "./middlewares/debugMiddleware.js";
+import { access } from "fs";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -30,6 +31,13 @@ const corsOptions = {
 
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  accessControlAllowHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
