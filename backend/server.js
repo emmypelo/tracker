@@ -26,7 +26,7 @@ app.use(express.json());
 
 // CORS configuration
 const corsOptions = {
-  origin:"https://api.pingbyleo.space",
+  origin:"https://tracker.pingbyleo.space",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   exposedHeaders: ["Set-Cookie"],
