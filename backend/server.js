@@ -24,20 +24,10 @@ if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-// Trust proxy for production (important for secure cookies behind reverse proxy)
-if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
-
-// Trust proxy for proper IP detection (important for Render/Vercel setup)
-app.set("trust proxy", 1);
-
-// Middleware order is important - cookieParser before CORS
+// Middleware
 app.use(cookieParser());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json());
 
-// Enhanced CORS configuration for Safari compatibility
 // Enhanced CORS configuration for Safari compatibility
 const corsOptions = {
   origin: (origin, callback) => {
@@ -55,31 +45,6 @@ const corsOptions = {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  origin: function (origin, callback) {
-    const allowedOrigins =
-      process.env.NODE_ENV === "production"
-        ? [
-            "https://tracker-rust-zeta.vercel.app",
-            "https://tracker-rust-zeta-git-main-yourusername.vercel.app", // Add your git branch URLs
-            "https://tracker-rust-zeta-yourusername.vercel.app", // Add your team URLs
-          ]
-        : [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:3000",
-            "http://127.0.0.1:3000",
-          ];
-
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log(`CORS blocked origin: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: [
@@ -92,20 +57,8 @@ const corsOptions = {
     "Cache-Control",
     "Pragma",
   ],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "Cookie",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-    "Cache-Control",
-    "X-File-Name",
-  ],
   exposedHeaders: ["Set-Cookie"],
   optionsSuccessStatus: 200, // For legacy browser support
-  preflightContinue: false,
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
   preflightContinue: false,
 };
 
@@ -123,46 +76,9 @@ app.use((req, res, next) => {
   }
   next();
 });
-// Additional headers for Safari compatibility
-app.use((req, res, next) => {
-  const origin = req.get("origin");
-
-  // Set additional headers for Safari
-  if (origin && corsOptions.origin(origin, () => {})) {
-    res.header("Access-Control-Allow-Credentials", "true");
-    res.header("Access-Control-Allow-Origin", origin);
-
-    // Safari-specific headers
-    res.header("Vary", "Origin, Access-Control-Request-Headers");
-
-    // Prevent caching of CORS preflight
-    if (req.method === "OPTIONS") {
-      res.header("Access-Control-Max-Age", "86400"); // 24 hours
-      res.header("Cache-Control", "no-cache, no-store, must-revalidate");
-    }
-  }
-
-  next();
-});
-
-// Handle preflight requests explicitly
-app.options("*", (req, res) => {
-  res.sendStatus(200);
-});
 
 // Routes
 app.use(debugMiddleware);
-
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-  });
-});
-
-// API routes
 app.use("/api/auth", userRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/users", userRouter);
@@ -184,11 +100,7 @@ app.get("/health", (req, res) => {
 
 // 404 handler
 app.use((req, res, next) => {
-  res.status(404).json({
-    message: "Route not found on the server",
-    path: req.path,
-    method: req.method,
-  });
+  res.status(404).json({ message: "Route not found on the server" });
 });
 
 // Error handling middleware
@@ -203,16 +115,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-
-  // CORS error handling
-  if (err.message === "Not allowed by CORS") {
-    return res.status(403).json({
-      status: "error",
-      message: "CORS policy violation",
-      origin: req.get("origin"),
-    });
-  }
-
   res.status(500).json({
     status: "error",
     message: "Internal server error",
@@ -222,12 +124,7 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB and start server
 mongoose
-  .connect(process.env.MONGO_URI, {
-    // Add these options for better connection handling
-    maxPoolSize: 10,
-    serverSelectionTimeoutMS: 5000,
-    socketTimeoutMS: 45000,
-  })
+  .connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
@@ -239,8 +136,6 @@ mongoose
             : "localhost:5173"
         }`
       );
-      console.log(`Environment: ${process.env.NODE_ENV}`);
-      console.log(`MongoDB connected successfully`);
     });
   })
   .catch((error) => {

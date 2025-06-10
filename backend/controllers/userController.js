@@ -7,17 +7,23 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import User from "../models/User.js";
+import sendPasswordMail from "../utilities/sendPasswordMail.js";
 import { sendResponse } from "../utilities/sendResponse.js";
 
 // Helper function to safely convert any ID format to a valid ObjectId string
 const safeObjectId = (id) => {
   try {
+    // If id is a Buffer, convert to string
     if (Buffer.isBuffer(id)) {
       id = id.toString("hex");
     }
+
+    // If id is already a valid ObjectId, return its string representation
     if (mongoose.Types.ObjectId.isValid(id)) {
       return id.toString();
     }
+
+    // If we have a string that's not in ObjectId format, return null
     return null;
   } catch (error) {
     return null;
@@ -34,14 +40,15 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "7d",
+      expiresIn: "7d", // Extended to 7 days for better user experience
     }
   );
 };
 
-// Fixed cookie options for better Safari compatibility
-const getCookieOptions = (req) => {
+// Enhanced cookie options for Safari compatibility
+const getCookieOptions = () => {
   const isProduction = process.env.NODE_ENV === "production";
+
   const options = {
     httpOnly: true,
     secure: isProduction, // Must be true for SameSite=None in production
@@ -135,6 +142,7 @@ const userController = {
     }
 
     try {
+      // Convert email to lowercase
       const lowerCaseEmail = email.toLowerCase();
 
       // Check if user already exists
@@ -144,7 +152,7 @@ const userController = {
       }
 
       // Hash password
-      const salt = await bcrypt.genSalt(12);
+      const salt = await bcrypt.genSalt(12); // Increased from 10 to 12 for better security
       const hashedPassword = await bcrypt.hash(password, salt);
 
       // Create new user
@@ -184,7 +192,7 @@ const userController = {
       return sendResponse(res, 201, "success", "User created successfully", {
         user: userResponse,
         isAuthenticated: true,
-        token: process.env.NODE_ENV === "development" ? token : undefined,
+        token: process.env.NODE_ENV === "development" ? token : undefined, // Only include token in development
       });
     } catch (error) {
       return sendResponse(
@@ -208,6 +216,7 @@ const userController = {
     }
 
     try {
+      // Convert email to lowercase
       const lowerCaseEmail = email.toLowerCase();
 
       // Find user by email
@@ -356,8 +365,10 @@ const userController = {
     try {
       // Verify the JWT token
       const decodedUser = jwt.verify(token, process.env.JWT_SECRET);
+
       const userIdFromToken = decodedUser.id;
 
+      // Validate that we have a user ID
       if (!userIdFromToken) {
         res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(
@@ -365,12 +376,16 @@ const userController = {
           401,
           "error",
           "Invalid token: missing user ID",
-          { isAuthenticated: false }
+          {
+            isAuthenticated: false,
+          }
         );
       }
 
+      // Convert to string and validate ObjectId format
       const userIdString = String(userIdFromToken);
 
+      // Validate ObjectId format
       if (!mongoose.Types.ObjectId.isValid(userIdString)) {
         res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(res, 401, "error", "Invalid user ID format", {
@@ -396,7 +411,7 @@ const userController = {
 
       if (tokenExp.getTime() - now.getTime() < oneDay) {
         const newToken = generateToken(user);
-        res.cookie("TrackIt", newToken, getCookieOptions(req));
+        res.cookie("TrackIt", newToken, getCookieOptions());
       }
 
       return sendResponse(res, 200, "success", "User is authenticated", {
@@ -411,6 +426,7 @@ const userController = {
       // Clear invalid token with Safari-compatible options
       res.cookie("TrackIt", "", clearCookieOptions());
 
+      // Handle specific JWT errors
       if (error.name === "JsonWebTokenError") {
         return sendResponse(res, 401, "error", "Invalid authentication token", {
           isAuthenticated: false,
@@ -542,6 +558,7 @@ const userController = {
         .update(verifyToken)
         .digest("hex");
 
+      // Find the user
       const userFound = await User.findOne({
         passwordResetToken: cryptoToken,
         passwordResetExpires: { $gt: Date.now() },
@@ -561,11 +578,12 @@ const userController = {
       userFound.passwordResetToken = null;
       userFound.passwordResetExpires = null;
 
+      // Save the user
       await userFound.save();
 
       // Generate a new token and log the user in automatically
       const token = generateToken(userFound);
-      res.cookie("TrackIt", token, getCookieOptions(req));
+      res.cookie("TrackIt", token, getCookieOptions());
 
       return sendResponse(res, 200, "success", "Password successfully reset", {
         isAuthenticated: true,
