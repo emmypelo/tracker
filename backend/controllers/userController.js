@@ -39,13 +39,44 @@ const generateToken = (user) => {
   );
 };
 
+// Enhanced cookie options for Safari compatibility
+const getCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  const options = {
 // Fixed cookie options for better Safari compatibility
 const getCookieOptions = (req) => {
   return {
     httpOnly: true,
-    secure: true,
-    sameSite: "None",
+    secure: isProduction, // Must be true for SameSite=None in production
+    sameSite: isProduction ? "none" : "lax", // 'none' for cross-origin in production
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: "/", // Explicitly set path for Safari
+  };
+
+  // Additional Safari-specific configurations for production
+  if (isProduction) {
+    // Uncomment and adjust if your frontend and backend are on different domains
+    // options.domain = ".yourdomain.com";
+
+    // For debugging: log cookie options
+    console.log("Setting cookie with options:", options);
+  }
+
+  return options;
+};
+
+// Alternative cookie clearing function for Safari
+const clearCookieOptions = () => {
+  const isProduction = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+    path: "/",
+    maxAge: 0, // Expire immediately
+    expires: new Date(0), // Additional expiry for Safari
   };
 };
 
@@ -131,8 +162,19 @@ const userController = {
       // Generate token for auto-login after registration
       const token = generateToken(newUser);
 
-      // Set token in cookie with improved options
-      res.cookie("TrackIt", token, getCookieOptions(req));
+      // Set token in cookie with Safari-compatible options
+      const cookieOptions = getCookieOptions();
+      res.cookie("TrackIt", token, cookieOptions);
+
+      // Additional Safari compatibility headers
+      if (process.env.NODE_ENV === "production") {
+        res.header(
+          "Set-Cookie",
+          `TrackIt=${token}; ${Object.entries(cookieOptions)
+            .map(([key, value]) => `${key}=${value}`)
+            .join("; ")}`
+        );
+      }
 
       // Remove password from response
       const userResponse = {
@@ -160,7 +202,7 @@ const userController = {
     }
   }),
 
-  // Login user with improved cookie handling
+  // Login user with enhanced Safari support
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -187,22 +229,16 @@ const userController = {
       // Generate JWT token
       const token = generateToken(user);
 
-      // Clear any existing cookie first
-      res.clearCookie("TrackIt", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        path: "/",
-      });
+      // Set token in cookie with Safari-compatible options
+      const cookieOptions = getCookieOptions();
+      res.cookie("TrackIt", token, cookieOptions);
 
-      // Set new token in cookie with improved options
-      res.cookie("TrackIt", token, getCookieOptions(req));
-
-      // Also set CORS headers if needed
-      const origin = req.get("origin");
-      if (origin) {
-        res.header("Access-Control-Allow-Credentials", "true");
-        res.header("Access-Control-Allow-Origin", origin);
+      // Log for debugging in production
+      if (process.env.NODE_ENV === "production") {
+        console.log(
+          "Login successful, cookie set with options:",
+          cookieOptions
+        );
       }
 
       return sendResponse(res, 200, "success", "Login Success", {
@@ -226,18 +262,94 @@ const userController = {
     }
   }),
 
-  // Improved authentication check
-  checkAuthentication: asyncHandler(async (req, res) => {
-    // Get token from cookie with fallback to Authorization header
-    let token = req.cookies?.TrackIt;
+  // Fetch all users
+  fetchAllUsers: asyncHandler(async (req, res) => {
+    try {
+      // Add pagination
+      const page = Number.parseInt(req.query.page) || 1;
+      const limit = Number.parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
 
-    // Fallback to Authorization header if cookie is not present
-    if (!token && req.headers.authorization) {
-      const authHeader = req.headers.authorization;
-      if (authHeader.startsWith("Bearer ")) {
-        token = authHeader.substring(7);
+      const { name } = req.query;
+      const filter = {};
+
+      // Enhanced filtering options
+      if (name) {
+        filter.$or = [
+          { firstname: { $regex: name, $options: "i" } },
+          { lastname: { $regex: name, $options: "i" } },
+          { email: { $regex: name.toLowerCase(), $options: "i" } },
+          { role: { $regex: name, $options: "i" } },
+        ];
       }
+
+      const users = await User.find(filter)
+        .select(
+          "-password -authMethod -passwordResetToken -passwordResetExpires"
+        )
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+
+      const total = await User.countDocuments(filter);
+
+      return sendResponse(res, 200, "success", "Users fetched successfully", {
+        users,
+        pagination: {
+          total,
+          page,
+          pages: Math.ceil(total / limit),
+          limit,
+        },
+      });
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "Failed to fetch users",
+        null,
+        error.message
+      );
     }
+  }),
+
+  // Fetch a user
+  fetchAUser: asyncHandler(async (req, res) => {
+    try {
+      const userId = req.params.userId;
+
+      if (!userId) {
+        return sendResponse(res, 400, "error", "User ID is required");
+      }
+
+      const user = await User.findById(userId).select(
+        "-password -authMethod -passwordResetToken -passwordResetExpires"
+      );
+
+      if (!user) {
+        return sendResponse(res, 404, "error", "User not found");
+      }
+
+      return sendResponse(res, 200, "success", "User fetched successfully", {
+        user,
+      });
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "Failed to fetch user",
+        null,
+        error.message
+      );
+    }
+  }),
+
+  // Check authentication status with enhanced Safari support
+  checkAuthentication: asyncHandler(async (req, res) => {
+    // Get token from cookie only
+    const token = req.cookies?.TrackIt;
 
     if (!token) {
       return sendResponse(res, 401, "error", "User is not authenticated", {
@@ -251,8 +363,7 @@ const userController = {
       const userIdFromToken = decodedUser.id;
 
       if (!userIdFromToken) {
-        // Clear invalid cookie
-        res.clearCookie("TrackIt", getCookieOptions(req));
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(
           res,
           401,
@@ -265,7 +376,7 @@ const userController = {
       const userIdString = String(userIdFromToken);
 
       if (!mongoose.Types.ObjectId.isValid(userIdString)) {
-        res.clearCookie("TrackIt", getCookieOptions(req));
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(res, 401, "error", "Invalid user ID format", {
           isAuthenticated: false,
         });
@@ -276,7 +387,7 @@ const userController = {
       );
 
       if (!user) {
-        res.clearCookie("TrackIt", getCookieOptions(req));
+        res.cookie("TrackIt", "", clearCookieOptions());
         return sendResponse(res, 401, "error", "User not found", {
           isAuthenticated: false,
         });
@@ -301,8 +412,8 @@ const userController = {
         role: user.role || "user",
       });
     } catch (error) {
-      // Clear invalid token
-      res.clearCookie("TrackIt", getCookieOptions(req));
+      // Clear invalid token with Safari-compatible options
+      res.cookie("TrackIt", "", clearCookieOptions());
 
       if (error.name === "JsonWebTokenError") {
         return sendResponse(res, 401, "error", "Invalid authentication token", {
@@ -325,33 +436,84 @@ const userController = {
     }
   }),
 
-  // Improved logout
+  // User logout with enhanced Safari support
   logout: asyncHandler(async (req, res) => {
-    // Clear cookie with same options used to set it
-    res.clearCookie("TrackIt", getCookieOptions(req));
+    // Clear cookie with Safari-compatible options
+    res.cookie("TrackIt", "", clearCookieOptions());
 
-    // Also clear with different sameSite values to ensure compatibility
-    res.clearCookie("TrackIt", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
-
-    res.clearCookie("TrackIt", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
-      path: "/",
-    });
+    // Additional Safari compatibility - set multiple clear attempts
+    if (process.env.NODE_ENV === "production") {
+      res.clearCookie("TrackIt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+      });
+    }
 
     return sendResponse(res, 200, "success", "Logged out successfully");
   }),
 
-  // ... (rest of your methods remain the same)
-  // I'm including the key methods that needed cookie fixes
+  // Forgot password (sending email token)
+  forgotPassword: asyncHandler(async (req, res) => {
+    const { email } = req.body;
 
-  // Reset password with improved cookie handling
+    if (!email) {
+      return sendResponse(res, 400, "error", "Email is required");
+    }
+
+    try {
+      // Convert email to lowercase
+      const lowerCaseEmail = email.toLowerCase();
+
+      // Find the user
+      const user = await User.findOne({ email: lowerCaseEmail });
+      if (!user) {
+        // For security reasons, don't reveal if user exists or not
+        return sendResponse(
+          res,
+          200,
+          "success",
+          `If a user with that email exists, a password reset link has been sent`
+        );
+      }
+
+      // Use the method from the model
+      const token = await user.generatePasswordResetToken();
+
+      // Save the user
+      await user.save();
+
+      // Send the email
+      await sendPasswordMail(user.email, token);
+
+      return sendResponse(
+        res,
+        200,
+        "success",
+        `If a user with that email exists, a password reset link has been sent`
+      );
+    } catch (error) {
+      // More specific error handling
+      if (error.message.includes("Gmail authentication")) {
+        return sendResponse(
+          res,
+          500,
+          "error",
+          "Email service configuration error. Please contact support."
+        );
+      }
+
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request. Please try again later."
+      );
+    }
+  }),
+
+  // Reset password with enhanced Safari cookie support
   resetPassword: asyncHandler(async (req, res) => {
     const { verifyToken } = req.params;
     const { password, confirmPassword } = req.body;
@@ -418,6 +580,339 @@ const userController = {
         500,
         "error",
         "An error occurred while resetting your password",
+        null,
+        error.message
+      );
+    }
+  }),
+
+  // Delete a user (only user or admin)
+  deleteUser: asyncHandler(async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return sendResponse(res, 400, "error", "User ID is required");
+      }
+
+      // Safely convert the authenticated user ID to a valid ObjectId string
+      const currentUserId = safeObjectId(req.user.id);
+      if (!currentUserId) {
+        return sendResponse(res, 401, "error", "Invalid authentication");
+      }
+
+      // First, get the current authenticated user with complete details
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return sendResponse(res, 401, "error", "Authentication failed");
+      }
+
+      // Ensure only the user themselves or an admin can delete
+      if (
+        currentUser.role !== "admin" &&
+        currentUser._id.toString() !== userId
+      ) {
+        return sendResponse(
+          res,
+          403,
+          "error",
+          "Unauthorized to delete this user"
+        );
+      }
+
+      const user = await User.findByIdAndDelete(userId);
+      if (!user) {
+        return sendResponse(res, 404, "error", "User not found");
+      }
+
+      // If user deletes their own account, log them out with Safari-compatible options
+      if (currentUser._id.toString() === userId) {
+        res.cookie("TrackIt", "", clearCookieOptions());
+      }
+
+      return sendResponse(res, 200, "success", "User deleted successfully");
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request",
+        null,
+        error.message
+      );
+    }
+  }),
+
+  // Edit personal profile (only the user themselves or an admin)
+  editUserProfile: asyncHandler(async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return sendResponse(res, 400, "error", "User ID is required");
+      }
+
+      // First, check if the user exists
+      const userToEdit = await User.findById(userId);
+      if (!userToEdit) {
+        return sendResponse(res, 404, "error", "User not found");
+      }
+
+      // Safely convert the authenticated user ID to a valid ObjectId string
+      const currentUserId = safeObjectId(req.user.id);
+      if (!currentUserId) {
+        return sendResponse(res, 401, "error", "Invalid authentication");
+      }
+
+      // Get the complete details of the authenticated user
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return sendResponse(res, 401, "error", "Authentication failed");
+      }
+
+      // Check authorization: Only the user themselves or an admin can edit
+      const isOwnProfile = currentUser._id.toString() === userId;
+      const isAdmin = currentUser.role === "admin";
+
+      if (!isOwnProfile && !isAdmin) {
+        return sendResponse(
+          res,
+          403,
+          "error",
+          "Unauthorized to edit this profile"
+        );
+      }
+
+      // Validate input data
+      const { firstname, lastname, email } = req.body;
+
+      // Create an object with only the fields that should be updated
+      const updateData = {};
+
+      if (firstname) updateData.firstname = firstname;
+      if (lastname) updateData.lastname = lastname;
+
+      // Only allow email change if it's not already taken
+      if (email && email !== userToEdit.email) {
+        const lowerCaseEmail = email.toLowerCase();
+        const emailExists = await User.findOne({
+          email: lowerCaseEmail,
+          _id: { $ne: userId },
+        });
+        if (emailExists) {
+          return sendResponse(res, 400, "error", "Email is already in use");
+        }
+        updateData.email = lowerCaseEmail; // Use lowercase email
+      }
+
+      // Update the user
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select(
+        "-password -authMethod -passwordResetToken -passwordResetExpires"
+      );
+
+      return sendResponse(res, 200, "success", "Profile updated successfully", {
+        user: updatedUser,
+      });
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request",
+        null,
+        error.message
+      );
+    }
+  }),
+
+  // Admin-only edit user profile
+  adminEditUser: asyncHandler(async (req, res) => {
+    try {
+      // Safely convert the authenticated user ID to a valid ObjectId string
+      const currentUserId = safeObjectId(req.user.id);
+      if (!currentUserId) {
+        return sendResponse(res, 401, "error", "Invalid authentication");
+      }
+
+      // Get the complete details of the authenticated user
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return sendResponse(res, 401, "error", "Authentication failed");
+      }
+
+      // Check if the current user is an admin
+      if (currentUser.role !== "admin") {
+        return sendResponse(res, 403, "error", "Unauthorized: Admins only");
+      }
+
+      const { userId } = req.params;
+
+      if (!userId) {
+        return sendResponse(res, 400, "error", "User ID is required");
+      }
+
+      // Check if user exists
+      const userToEdit = await User.findById(userId);
+      if (!userToEdit) {
+        return sendResponse(res, 404, "error", "User not found");
+      }
+
+      // Validate and sanitize input data
+      const { firstname, lastname, email, role } = req.body;
+
+      // Create an object with only the fields that should be updated
+      const updateData = {};
+
+      if (firstname) updateData.firstname = firstname;
+      if (lastname) updateData.lastname = lastname;
+
+      // Only allow email change if it's not already taken
+      if (email && email !== userToEdit.email) {
+        const lowerCaseEmail = email.toLowerCase();
+        const emailExists = await User.findOne({
+          email: lowerCaseEmail,
+          _id: { $ne: userId },
+        });
+        if (emailExists) {
+          return sendResponse(res, 400, "error", "Email is already in use");
+        }
+        updateData.email = lowerCaseEmail; // Use lowercase email
+      }
+
+      // Only admins can change roles
+      if (role) {
+        // Validate role is one of the allowed values
+        const allowedRoles = ["user", "admin", "manager"];
+        if (!allowedRoles.includes(role)) {
+          return sendResponse(res, 400, "error", "Invalid role specified");
+        }
+
+        // Prevent changing the role of the last admin
+        if (userToEdit.role === "admin" && role !== "admin") {
+          const adminCount = await User.countDocuments({ role: "admin" });
+          if (adminCount <= 1) {
+            return sendResponse(
+              res,
+              400,
+              "error",
+              "Cannot change the role of the last admin"
+            );
+          }
+        }
+
+        updateData.role = role;
+      }
+
+      // Update the user
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select(
+        "-password -authMethod -passwordResetToken -passwordResetExpires"
+      );
+
+      return sendResponse(res, 200, "success", "User updated successfully", {
+        user: updatedUser,
+      });
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while processing your request",
+        null,
+        error.message
+      );
+    }
+  }),
+
+  // Change password (for authenticated users) with enhanced Safari support
+  changePassword: asyncHandler(async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      // Validate input
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return sendResponse(
+          res,
+          400,
+          "error",
+          "All password fields are required"
+        );
+      }
+
+      if (newPassword !== confirmPassword) {
+        return sendResponse(res, 400, "error", "New passwords don't match");
+      }
+
+      if (newPassword.length < 8) {
+        return sendResponse(
+          res,
+          400,
+          "error",
+          "Password must be at least 8 characters"
+        );
+      }
+
+      // Safely convert the authenticated user ID to a valid ObjectId string
+      const currentUserId = safeObjectId(req.user.id);
+      if (!currentUserId) {
+        return sendResponse(res, 401, "error", "Invalid authentication");
+      }
+
+      // Get the complete details of the authenticated user
+      const currentUser = await User.findById(currentUserId);
+      if (!currentUser) {
+        return sendResponse(res, 401, "error", "Authentication failed");
+      }
+
+      // Authorization check
+      if (
+        currentUser._id.toString() !== userId &&
+        currentUser.role !== "admin"
+      ) {
+        return sendResponse(
+          res,
+          403,
+          "error",
+          "Unauthorized to change this user's password"
+        );
+      }
+
+      // Find the user
+      const user = await User.findById(userId);
+      if (!user) {
+        return sendResponse(res, 404, "error", "User not found");
+      }
+
+      // Verify current password
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return sendResponse(res, 400, "error", "Current password is incorrect");
+      }
+
+      // Hash and update password
+      const salt = await bcrypt.genSalt(12);
+      user.password = await bcrypt.hash(newPassword, salt);
+      await user.save();
+
+      // Generate a new token with updated credentials
+      const token = generateToken(user);
+      res.cookie("TrackIt", token, getCookieOptions());
+
+      return sendResponse(res, 200, "success", "Password changed successfully");
+    } catch (error) {
+      return sendResponse(
+        res,
+        500,
+        "error",
+        "An error occurred while changing password",
         null,
         error.message
       );

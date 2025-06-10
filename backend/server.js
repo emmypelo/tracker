@@ -19,6 +19,16 @@ import { debugMiddleware } from "./middlewares/debugMiddleware.js";
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Trust proxy for production (important for secure cookies behind reverse proxy)
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+// Trust proxy for production (important for secure cookies behind reverse proxy)
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
 // Trust proxy for proper IP detection (important for Render/Vercel setup)
 app.set("trust proxy", 1);
 
@@ -28,7 +38,23 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Enhanced CORS configuration for Safari compatibility
+// Enhanced CORS configuration for Safari compatibility
 const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins =
+      process.env.NODE_ENV === "production"
+        ? ["https://tracker-rust-zeta.vercel.app"]
+        : ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   origin: function (origin, callback) {
     const allowedOrigins =
       process.env.NODE_ENV === "production"
@@ -64,15 +90,39 @@ const corsOptions = {
     "Accept",
     "Origin",
     "Cache-Control",
+    "Pragma",
+  ],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "Cookie",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Cache-Control",
     "X-File-Name",
   ],
   exposedHeaders: ["Set-Cookie"],
+  optionsSuccessStatus: 200, // For legacy browser support
+  preflightContinue: false,
   optionsSuccessStatus: 200, // Some legacy browsers choke on 204
   preflightContinue: false,
 };
 
 app.use(cors(corsOptions));
 
+// Handle preflight requests explicitly for better Safari support
+app.options("*", cors(corsOptions));
+
+// Additional middleware for Safari cookie compatibility
+app.use((req, res, next) => {
+  // Set additional headers for Safari compatibility
+  if (process.env.NODE_ENV === "production") {
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("Vary", "Origin");
+  }
+  next();
+});
 // Additional headers for Safari compatibility
 app.use((req, res, next) => {
   const origin = req.get("origin");
@@ -123,6 +173,15 @@ app.use("/api/reportcategory", reportCategoryRouter);
 app.use("/api/stations", stationRouter);
 app.use("/api/reports", reportRouter);
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Server is running",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // 404 handler
 app.use((req, res, next) => {
   res.status(404).json({
@@ -135,6 +194,15 @@ app.use((req, res, next) => {
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error("Server error:", err);
+
+  // Handle CORS errors specifically
+  if (err.message === "Not allowed by CORS") {
+    return res.status(403).json({
+      status: "error",
+      message: "CORS policy violation",
+    });
+  }
+
 
   // CORS error handling
   if (err.message === "Not allowed by CORS") {
@@ -164,19 +232,17 @@ mongoose
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
       console.log(`Environment: ${process.env.NODE_ENV}`);
+      console.log(
+        `CORS enabled for: ${
+          process.env.NODE_ENV === "production"
+            ? "https://tracker-rust-zeta.vercel.app"
+            : "localhost:5173"
+        }`
+      );
+      console.log(`Environment: ${process.env.NODE_ENV}`);
       console.log(`MongoDB connected successfully`);
     });
   })
   .catch((error) => {
-    console.error(`Failed to connect to MongoDB: ${error.message}`);
-    process.exit(1);
+    throw new Error(`Failed to connect to MongoDB: ${error.message}`);
   });
-
-// Graceful shutdown
-process.on("SIGTERM", () => {
-  console.log("SIGTERM received, shutting down gracefully");
-  mongoose.connection.close(() => {
-    console.log("MongoDB connection closed");
-    process.exit(0);
-  });
-});
