@@ -19,12 +19,10 @@ import { debugMiddleware } from "./middlewares/debugMiddleware.js";
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Trust proxy for production (important for secure cookies behind reverse proxy)
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
-// Middleware
 app.use(cookieParser());
 app.use(express.json());
 
@@ -36,7 +34,6 @@ const corsOptions = {
         ? ["https://tracker-rust-zeta.vercel.app"]
         : ["http://localhost:5173", "http://127.0.0.1:5173"];
 
-    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
@@ -58,7 +55,7 @@ const corsOptions = {
     "Pragma",
   ],
   exposedHeaders: ["Set-Cookie"],
-  optionsSuccessStatus: 200, // For legacy browser support
+  optionsSuccessStatus: 200, 
   preflightContinue: false,
 };
 
@@ -67,9 +64,8 @@ app.use(cors(corsOptions));
 // Handle preflight requests explicitly for better Safari support
 app.options("*", cors(corsOptions));
 
-// Additional middleware for Safari cookie compatibility
 app.use((req, res, next) => {
-  // Set additional headers for Safari compatibility
+  
   if (process.env.NODE_ENV === "production") {
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Vary", "Origin");

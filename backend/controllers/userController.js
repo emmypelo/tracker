@@ -40,14 +40,14 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "7d", // Extended to 7 days for better user experience
+      expiresIn: "7d", 
     }
   );
 };
 
 // Enhanced cookie options for Safari compatibility
 const getCookieOptions = () => {
-  const isProduction = process.env.NODE_ENV === "production";
+  const isProduction = process.env.NODE_ENV === "production" || true;
 
   const options = {
     httpOnly: true,
@@ -59,10 +59,10 @@ const getCookieOptions = () => {
 
   // Additional Safari-specific configurations for production
   if (isProduction) {
-    // Uncomment and adjust if your frontend and backend are on different domains
-    // options.domain = ".yourdomain.com";
+   
+    options.domain = "tracker-rust-zeta.vercel.app"; 
 
-    // For debugging: log cookie options
+  
     console.log("Setting cookie with options:", options);
   }
 
@@ -78,8 +78,8 @@ const clearCookieOptions = () => {
     secure: isProduction,
     sameSite: isProduction ? "none" : "lax",
     path: "/",
-    maxAge: 0, // Expire immediately
-    expires: new Date(0), // Additional expiry for Safari
+    maxAge: 0, 
+    expires: new Date(0), 
   };
 };
 
