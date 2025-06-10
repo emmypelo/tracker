@@ -26,10 +26,7 @@ app.use(express.json());
 
 // CORS configuration
 const corsOptions = {
-  origin:
-    process.env.MODE === "production"
-      ? "https://api.pingbyleo.space"
-      : "http://localhost:5173" || "https://tracker.pingbyleo.space",
+  origin:"https://api.pingbyleo.space",
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
   exposedHeaders: ["Set-Cookie"],
