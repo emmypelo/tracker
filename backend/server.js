@@ -26,10 +26,8 @@ app.use(express.json());
 
 // CORS configuration
 const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? "https://tracker.pingbyleo.space"
-      : ["http://localhost:5173", "http://127.0.0.1:5173"],
+  origin: "https://tracker.pingbyleo.space",
+
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -49,6 +47,10 @@ app.use("/api/regions", regionRouter);
 app.use("/api/reportcategory", reportCategoryRouter);
 app.use("/api/stations", stationRouter);
 app.use("/api/reports", reportRouter);
+app.use((req, res, next) => {
+  console.log("Incoming request from:", req.headers.origin);
+  next();
+});
 
 // 404 handler
 app.use((req, res, next) => {
