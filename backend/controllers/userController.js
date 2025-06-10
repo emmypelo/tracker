@@ -41,17 +41,11 @@ const generateToken = (user) => {
 
 // Fixed cookie options for better Safari compatibility
 const getCookieOptions = (req) => {
-  const isProduction = process.env.NODE_ENV === "production";
-  const origin = req.get("origin") || req.get("referer");
-  const isCrossOrigin = origin && !origin.includes(req.get("host"));
-
   return {
     httpOnly: true,
-    secure: isProduction, // Always secure in production
-    sameSite: isProduction && isCrossOrigin ? "none" : "lax", // Use 'lax' for same-origin, 'none' for cross-origin
+    secure: true,
+    sameSite: "None",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    path: "/", // Explicitly set path
-    domain: isProduction ? process.env.COOKIE_DOMAIN : undefined, // Set domain in production if needed
   };
 };
 
