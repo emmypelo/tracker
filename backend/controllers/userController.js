@@ -58,7 +58,6 @@ const getCookieOptions = () => {
   };
 };
 
-
 const userController = {
   // Check if user exists
   checkUserExist: asyncHandler(async (req, res) => {
@@ -171,7 +170,6 @@ const userController = {
     }
   }),
 
-  
   loginUser: asyncHandler(async (req, res) => {
     const { email, password } = req.body;
 
@@ -240,10 +238,9 @@ const userController = {
           { firstname: { $regex: name, $options: "i" } },
           { lastname: { $regex: name, $options: "i" } },
           { email: { $regex: name.toLowerCase(), $options: "i" } },
-          {role: { $regex: name, $options: "i" } }
+          { role: { $regex: name, $options: "i" } },
         ];
       }
-
 
       const users = await User.find(filter)
         .select(
@@ -251,7 +248,7 @@ const userController = {
         )
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 }); 
+        .sort({ createdAt: -1 });
 
       const total = await User.countDocuments(filter);
 
@@ -888,8 +885,6 @@ const userController = {
       );
     }
   }),
-
-
 };
 
 export default userController;

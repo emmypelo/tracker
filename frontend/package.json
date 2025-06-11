@@ -10,7 +10,10 @@
     "react-query"
   ],
   "private": true,
-  "proxy": "https://tracker.pingbyleo.space",
+  "proxy": [
+    "https://tracker.pingbyleo.space",
+    "http://localhost:5173"
+  ],
   "description": "Frontend for PingByLeo Space",
   "author": "Leo",
   "license": "MIT",

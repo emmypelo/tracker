@@ -1,6 +1,3 @@
-"use client";
-
-/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -18,7 +15,7 @@ import { formatAmount } from "../hooks/hooks";
 import Modal from "../common/Modal";
 import debounce from "lodash/debounce";
 import { useSelector } from "react-redux";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Skeleton component for loading state
 const TaskSkeleton = ({ rows = 5 }) => {
@@ -92,6 +89,100 @@ const TaskSkeleton = ({ rows = 5 }) => {
   );
 };
 
+// Pagination component
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalTasks,
+  limit,
+}) => {
+  const startItem = (currentPage - 1) * limit + 1;
+  const endItem = Math.min(currentPage * limit, totalTasks);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-white border-t">
+      <div className="text-sm text-gray-700">
+        Showing {startItem} to {endItem} of {totalTasks} results
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Previous
+        </button>
+
+        <div className="flex items-center gap-1">
+          {getPageNumbers().map((page, index) => (
+            <button
+              key={index}
+              onClick={() => typeof page === "number" && onPageChange(page)}
+              disabled={page === "..."}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                page === currentPage
+                  ? "bg-blue-600 text-white"
+                  : page === "..."
+                  ? "text-gray-400 cursor-default"
+                  : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FetchTask = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,6 +195,10 @@ const FetchTask = () => {
   const [editingRowId, setEditingRowId] = useState(null);
   const [isError, setIsError] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [filters, setFilters] = useState({
     category: "",
     subCategory: "",
@@ -113,20 +208,47 @@ const FetchTask = () => {
     isCompleted: "",
     startDate: "",
     endDate: "",
+    page: 1,
+    limit: 10,
   });
   const [searchTerm, setSearchTerm] = useState("");
 
   const debouncedFetchTasks = useCallback(
-    debounce((newFilters) => {
-      queryClient.invalidateQueries(["fetchTasks", newFilters]);
-    }, 300),
-    []
+    (...args) => {
+      debounce((newFilters, page = 1, limit = itemsPerPage) => {
+        setCurrentPage(page);
+        queryClient.invalidateQueries([
+          "fetchTasks",
+          { ...newFilters, page, limit },
+        ]);
+      }, 300)(...args);
+    },
+    [itemsPerPage, queryClient]
   );
 
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
+    const newFilters = { ...filters, [key]: value, page: 1 }; // Reset to page 1 when filtering
     setFilters(newFilters);
-    debouncedFetchTasks(newFilters);
+    debouncedFetchTasks(newFilters, 1, itemsPerPage);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setFilters((prev) => ({ ...prev, page }));
+    queryClient.invalidateQueries([
+      "fetchTasks",
+      { ...filters, page, limit: itemsPerPage },
+    ]);
+  };
+
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+    setFilters((prev) => ({ ...prev, page: 1, limit: newLimit }));
+    queryClient.invalidateQueries([
+      "fetchTasks",
+      { ...filters, page: 1, limit: newLimit },
+    ]);
   };
 
   const {
@@ -136,8 +258,12 @@ const FetchTask = () => {
     refetch: taskRefetch,
     isLoading: isTasksLoading,
   } = useQuery({
-    queryKey: ["fetchTasks", filters],
-    queryFn: () => fetchTasksApi(filters),
+    queryKey: [
+      "fetchTasks",
+      { ...filters, page: currentPage, limit: itemsPerPage },
+    ],
+    queryFn: () =>
+      fetchTasksApi({ ...filters, page: currentPage, limit: itemsPerPage }),
     keepPreviousData: true,
   });
 
@@ -156,7 +282,10 @@ const FetchTask = () => {
     mutationFn: updateTaskApi,
     onSuccess: () => {
       setEditingRowId(null);
-      queryClient.invalidateQueries(["fetchTasks", filters]);
+      queryClient.invalidateQueries([
+        "fetchTasks",
+        { ...filters, page: currentPage, limit: itemsPerPage },
+      ]);
     },
   });
 
@@ -165,7 +294,7 @@ const FetchTask = () => {
     mutationFn: deleteTaskApi,
     onSuccess: () => {
       setIsError(false);
-      setModalMessage("Task updated successfully");
+      setModalMessage("Task deleted successfully");
       setIsModalOpen(true);
       taskRefetch();
     },
@@ -191,23 +320,20 @@ const FetchTask = () => {
       navigate("/signin", { state: { from: location } });
       return;
     }
-    deleteMutation
-      .mutateAsync(taskId)
+    deleteMutation.mutateAsync(taskId).catch((error) => {
+      let errorMessage = "Deleting failed";
 
-      .catch((error) => {
-        let errorMessage = "Deleting failed";
+      if (error.response?.status === 401 || error.message.includes("401")) {
+        navigate("/signin", { state: { from: location } });
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
 
-        if (error.response?.status === 401 || error.message.includes("401")) {
-          navigate("/signin", { state: { from: location } });
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        }
-
-        setModalMessage(errorMessage);
-        setIsModalOpen(true);
-      });
+      setModalMessage(errorMessage);
+      setIsModalOpen(true);
+    });
   };
 
   const [editValues, setEditValues] = useState({
@@ -307,15 +433,24 @@ const FetchTask = () => {
       isCompleted: "",
       startDate: "",
       endDate: "",
+      page: 1,
+      limit: itemsPerPage,
     };
     setFilters(clearedFilters);
-    debouncedFetchTasks(clearedFilters);
+    setCurrentPage(1);
+    debouncedFetchTasks(clearedFilters, 1, itemsPerPage);
   };
 
   if (isTasksError)
     return <h2>Error: {tasksError?.message || "Something went wrong"}</h2>;
 
   const tasks = tasksData?.data?.tasks || [];
+  const pagination = tasksData?.data?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalTasks: tasks.length,
+    limit: itemsPerPage,
+  };
   const categories = categoriesData?.data?.categories || [];
   const subCategories = subCategoriesData?.data?.subCategories || [];
 
@@ -335,7 +470,7 @@ const FetchTask = () => {
 
       <div className="sticky top-[8.5rem] z-20 bg-gray-100 h-[4.5rem]">
         <form onSubmit={handleSearchSubmit} className="h-full px-4 py-2">
-          <div className="flex items-center gap-2 md::gap-1 h-full w-full justify-between">
+          <div className="flex items-center gap-2 md:gap-1 h-full w-full justify-between">
             <input
               type="text"
               placeholder="Search by title"
@@ -433,8 +568,38 @@ const FetchTask = () => {
         </form>
       </div>
 
+      {/* Items per page selector */}
+      <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="itemsPerPage"
+            className="text-sm font-medium text-gray-700"
+          >
+            Show:
+          </label>
+          <select
+            id="itemsPerPage"
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="border border-gray-300 rounded px-2 py-1 text-sm"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-700">items per page</span>
+        </div>
+
+        {pagination.totalTasks > 0 && (
+          <div className="text-sm text-gray-700">
+            Total: {pagination.totalTasks} tasks
+          </div>
+        )}
+      </div>
+
       {isTasksLoading ? (
-        <TaskSkeleton rows={8} />
+        <TaskSkeleton rows={itemsPerPage} />
       ) : tasks.length === 0 ? (
         <div className="p-8 text-center text-gray-500">No tasks found</div>
       ) : (
@@ -442,7 +607,7 @@ const FetchTask = () => {
           <table className="w-full border-collapse border border-gray-300 bg-white">
             <thead>
               <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
-                <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
+                <th className="border p-1 w-[5%] ">S/N</th>
                 <th className="border p-1 w-[30%]">Title</th>
                 <th className="border p-1 w-[10%]">Amount</th>
                 <th className="border p-1 w-[10%] hidden md:table-cell">
@@ -470,8 +635,8 @@ const FetchTask = () => {
                     editingRowId === task._id ? "bg-yellow-50" : ""
                   }`}
                 >
-                  <td className="border px-1 py-2 hidden md:table-cell">
-                    {index + 1}
+                  <td className="border px-1 py-2 ">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
                   </td>
                   <td
                     className="border px-4 py-2 cursor-pointer text-blue-800 font-bold"
@@ -668,6 +833,17 @@ const FetchTask = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination Component */}
+          {pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+              totalTasks={pagination.totalTasks}
+              limit={pagination.limit}
+            />
+          )}
         </div>
       )}
 

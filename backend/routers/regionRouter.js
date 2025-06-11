@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import regionController from "../controllers/regionController.js";
-import {isAuthenticated} from "../middlewares/isAuthenticated.js";
+import { isAuthenticated } from "../middlewares/isAuthenticated.js";
 
 const regionRouter = Router();
 regionRouter

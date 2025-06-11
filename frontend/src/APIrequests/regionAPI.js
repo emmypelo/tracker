@@ -22,14 +22,13 @@ export const regionDetailsApi = async (regionId) => {
 };
 
 export const updateRegionApi = async (updateData) => {
-  const { data } = await axios.patch(
+  const { data } = await axios.put(
     `${baseUrl}/${updateData?.regionId}`,
     updateData,
     {
       withCredentials: true,
     }
   );
-
   return data;
 };
 

@@ -78,10 +78,17 @@ const taskController = {
       isCompleted,
       startDate,
       endDate,
+      page = 1,
+      limit = 10,
     } = req.query;
 
+    // Convert page and limit to numbers
+    const pageNumber = Number.parseInt(page, 10);
+    const limitNumber = Number.parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+
     // Basic filter
-    let filter = {};
+    const filter = {};
     if (category) {
       filter.category = category;
     }
@@ -89,16 +96,16 @@ const taskController = {
       filter.subCategory = subCategory;
     }
     if (title) {
-      filter.title = { $regex: title, $options: "i" }; // 
+      filter.title = { $regex: title, $options: "i" };
     }
     if (isApproved) {
-      filter.isApproved = isApproved;
+      filter.isApproved = isApproved === "true";
     }
     if (isPaid) {
-      filter.isPaid = isPaid;
+      filter.isPaid = isPaid === "true";
     }
     if (isCompleted) {
-      filter.isCompleted = isCompleted;
+      filter.isCompleted = isCompleted === "true";
     }
 
     // Date filter
@@ -113,14 +120,32 @@ const taskController = {
     }
 
     try {
-      // Fetch tasks based on the filter
+      // Get total count for pagination
+      const totalTasks = await Task.countDocuments(filter);
+
+      // Fetch tasks based on the filter with pagination
       const tasks = await Task.find(filter)
         .populate("category")
         .populate("subCategory")
-        .sort({ updatedAt: -1 });
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNumber);
+
+      // Calculate pagination info
+      const totalPages = Math.ceil(totalTasks / limitNumber);
+      const hasNextPage = pageNumber < totalPages;
+      const hasPrevPage = pageNumber > 1;
 
       return sendResponse(res, 200, "success", "Tasks fetched successfully", {
         tasks,
+        pagination: {
+          currentPage: pageNumber,
+          totalPages,
+          totalTasks,
+          hasNextPage,
+          hasPrevPage,
+          limit: limitNumber,
+        },
       });
     } catch (error) {
       return sendResponse(
@@ -207,7 +232,8 @@ const taskController = {
       if (req.body.isCompleted !== undefined)
         updateFields.isCompleted = req.body.isCompleted;
       if (req.body.remark !== undefined) updateFields.remark = req.body.remark;
-      if (req.body.isOngoing !== undefined) updateFields.isOngoing = req.body.isOngoing;
+      if (req.body.isOngoing !== undefined)
+        updateFields.isOngoing = req.body.isOngoing;
 
       // Update the task
       const taskUpdated = await Task.findByIdAndUpdate(taskId, updateFields, {

@@ -2,7 +2,8 @@ import axios from "axios";
 import { backendURL } from "../utils/backendURL.js";
 
 const baseUrl = `${backendURL}/reports`;
-// ? create Task API
+
+// ? create Report API
 export const createReportApi = async (values) => {
   const { data } = await axios.post(`${baseUrl}/create`, values, {
     withCredentials: true,
@@ -10,14 +11,17 @@ export const createReportApi = async (values) => {
   return data;
 };
 
-export const fetchReportsApi = async (filters) => {
+export const fetchReportsApi = async (filters = {}) => {
   // Remove empty filter values to prevent unnecessary query params
   const cleanFilters = Object.fromEntries(
-    Object.entries(filters).filter(([value]) => value !== "")
+    Object.entries(filters).filter(
+      ([, value]) => value !== "" && value !== null && value !== undefined
+    )
   );
 
   const { data } = await axios.get(`${baseUrl}`, {
     params: cleanFilters,
+    withCredentials: true,
   });
 
   return data;

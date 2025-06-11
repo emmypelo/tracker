@@ -1,7 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteReportApi,
@@ -18,7 +17,8 @@ import { useSelector } from "react-redux";
 import { fetchRegionsApi } from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
 import { fetchStationsApi } from "../../APIrequests/stationsAPI";
-import { Search, X } from "lucide-react";
+import { Search, X, ChevronLeft, ChevronRight } from "lucide-react";
+
 
 // Skeleton component for loading state
 const ReportSkeleton = ({ rows = 5 }) => {
@@ -82,6 +82,100 @@ const ReportSkeleton = ({ rows = 5 }) => {
   );
 };
 
+// Pagination component
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  totalReports,
+  limit,
+}) => {
+  const startItem = (currentPage - 1) * limit + 1;
+  const endItem = Math.min(currentPage * limit, totalReports);
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4 bg-white border-t">
+      <div className="text-sm text-gray-700">
+        Showing {startItem} to {endItem} of {totalReports} results
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Previous
+        </button>
+
+        <div className="flex items-center gap-1">
+          {getPageNumbers().map((page, index) => (
+            <button
+              key={index}
+              onClick={() => typeof page === "number" && onPageChange(page)}
+              disabled={page === "..."}
+              className={`px-3 py-2 text-sm font-medium rounded-md ${
+                page === currentPage
+                  ? "bg-blue-600 text-white"
+                  : page === "..."
+                  ? "text-gray-400 cursor-default"
+                  : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FetchReport = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +188,11 @@ const FetchReport = () => {
   const [editingRowId, setEditingRowId] = useState(null);
   const [isError, setIsError] = useState(false);
   const [reportToDelete, setReportToDelete] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [filters, setFilters] = useState({
     region: "",
     reportCategory: "",
@@ -102,20 +201,43 @@ const FetchReport = () => {
     station: "",
     startDate: "",
     endDate: "",
+    page: 1,
+    limit: 10,
   });
   const [searchTerm, setSearchTerm] = useState("");
 
-  const debouncedFetchReports = useCallback(
-    debounce((newFilters) => {
-      queryClient.invalidateQueries(["fetchReports", newFilters]);
-    }, 300),
-    []
-  );
-
+  const debouncedFetchReports = debounce((newFilters, page = 1, limit = itemsPerPage) => {
+    setCurrentPage(page);
+    queryClient.invalidateQueries([
+      "fetchReports",
+      { ...newFilters, page, limit },
+    ]);
+  }, 300);
+  // Use useRef for debounced fetch to avoid stale closure issues
+  
   const handleFilterChange = (key, value) => {
-    const newFilters = { ...filters, [key]: value };
+    const newFilters = { ...filters, [key]: value, page: 1 }; // Reset to page 1 when filtering
     setFilters(newFilters);
-    debouncedFetchReports(newFilters);
+    debouncedFetchReports(newFilters, 1, itemsPerPage);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    setFilters((prev) => ({ ...prev, page }));
+    queryClient.invalidateQueries([
+      "fetchReports",
+      { ...filters, page, limit: itemsPerPage },
+    ]);
+  };
+
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+    setFilters((prev) => ({ ...prev, page: 1, limit: newLimit }));
+    queryClient.invalidateQueries([
+      "fetchReports",
+      { ...filters, page: 1, limit: newLimit },
+    ]);
   };
 
   const {
@@ -125,8 +247,12 @@ const FetchReport = () => {
     refetch: reportRefetch,
     isLoading: isReportsLoading,
   } = useQuery({
-    queryKey: ["fetchReports", filters],
-    queryFn: () => fetchReportsApi(filters),
+    queryKey: [
+      "fetchReports",
+      { ...filters, page: currentPage, limit: itemsPerPage },
+    ],
+    queryFn: () =>
+      fetchReportsApi({ ...filters, page: currentPage, limit: itemsPerPage }),
     keepPreviousData: true,
   });
 
@@ -160,7 +286,10 @@ const FetchReport = () => {
     mutationFn: updateReportApi,
     onSuccess: () => {
       setEditingRowId(null);
-      queryClient.invalidateQueries(["fetchReports", filters]);
+      queryClient.invalidateQueries([
+        "fetchReports",
+        { ...filters, page: currentPage, limit: itemsPerPage },
+      ]);
     },
   });
 
@@ -320,15 +449,24 @@ const FetchReport = () => {
       station: "",
       startDate: "",
       endDate: "",
+      page: 1,
+      limit: itemsPerPage,
     };
     setFilters(clearedFilters);
-    debouncedFetchReports(clearedFilters);
+    setCurrentPage(1);
+    debouncedFetchReports(clearedFilters, 1, itemsPerPage);
   };
 
   if (isReportsError)
     return <h2>Error: {reportsError?.message || "Something went wrong"}</h2>;
 
   const reports = reportsData?.data?.reports || [];
+  const pagination = reportsData?.data?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalReports: reports.length,
+    limit: itemsPerPage,
+  };
   const regions = regionsData?.data?.regions || [];
   const reportCategories = reportCategoriesData?.data?.categories || [];
 
@@ -345,6 +483,7 @@ const FetchReport = () => {
           </Link>
         </div>
       </div>
+
       <div className="sticky top-[8.5rem] z-20 bg-gray-100 h-[4.5rem]">
         <form onSubmit={handleSearchSubmit} className="h-full px-4 py-2">
           <div className="flex items-center gap-2 h-full">
@@ -438,8 +577,38 @@ const FetchReport = () => {
         </form>
       </div>
 
+      {/* Items per page selector */}
+      <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="itemsPerPage"
+            className="text-sm font-medium text-gray-700"
+          >
+            Show:
+          </label>
+          <select
+            id="itemsPerPage"
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+            className="border border-gray-300 rounded px-2 py-1 text-sm"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <span className="text-sm text-gray-700">items per page</span>
+        </div>
+
+        {pagination.totalReports > 0 && (
+          <div className="text-sm text-gray-700">
+            Total: {pagination.totalReports} reports
+          </div>
+        )}
+      </div>
+
       {isReportsLoading ? (
-        <ReportSkeleton rows={8} />
+        <ReportSkeleton rows={itemsPerPage} />
       ) : reports.length === 0 ? (
         <div className="p-8 text-center text-gray-500">No reports found</div>
       ) : (
@@ -447,7 +616,7 @@ const FetchReport = () => {
           <table className="w-full border-collapse border border-gray-300 bg-white">
             <thead>
               <tr className="sticky top-[13.1rem] bg-gray-200 text-sm">
-                <th className="border p-1 w-[5%] hidden md:table-cell">S/N</th>
+                <th className="border p-1 w-[5%]  table-cell">S/N</th>
                 <th className="border p-1 w-[25%]">Title</th>
                 <th className="border p-1 w-[15%] hidden md:table-cell">
                   Region
@@ -473,8 +642,8 @@ const FetchReport = () => {
                     editingRowId === report._id ? "bg-yellow-50" : ""
                   }`}
                 >
-                  <td className="border px-1 py-2 hidden md:table-cell">
-                    {index + 1}
+                  <td className="border px-1 py-2 ">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
                   </td>
                   <td
                     className="border px-4 py-2 cursor-pointer text-blue-800 font-bold"
@@ -559,6 +728,17 @@ const FetchReport = () => {
               ))}
             </tbody>
           </table>
+
+          {/* Pagination Component */}
+          {pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={handlePageChange}
+              totalReports={pagination.totalReports}
+              limit={pagination.limit}
+            />
+          )}
         </div>
       )}
 

@@ -92,10 +92,17 @@ const reportController = {
       station,
       startDate,
       endDate,
+      page = 1,
+      limit = 10,
     } = req.query;
 
+    // Convert page and limit to numbers
+    const pageNumber = Number.parseInt(page, 10);
+    const limitNumber = Number.parseInt(limit, 10);
+    const skip = (pageNumber - 1) * limitNumber;
+
     // Basic filter
-    let filter = {};
+    const filter = {};
     if (region) {
       filter.region = region;
     }
@@ -124,15 +131,33 @@ const reportController = {
     }
 
     try {
-      // Fetch reports based on the filter
+      // Get total count for pagination
+      const totalReports = await Report.countDocuments(filter);
+
+      // Fetch reports based on the filter with pagination
       const reports = await Report.find(filter)
         .populate("region")
         .populate("reportCategory")
         .populate("station")
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNumber);
+
+      // Calculate pagination info
+      const totalPages = Math.ceil(totalReports / limitNumber);
+      const hasNextPage = pageNumber < totalPages;
+      const hasPrevPage = pageNumber > 1;
 
       return sendResponse(res, 200, "success", "Reports fetched successfully", {
         reports,
+        pagination: {
+          currentPage: pageNumber,
+          totalPages,
+          totalReports,
+          hasNextPage,
+          hasPrevPage,
+          limit: limitNumber,
+        },
       });
     } catch (error) {
       return sendResponse(
@@ -145,7 +170,6 @@ const reportController = {
       );
     }
   }),
-
   // Fetch one report by ID
   fetchOneReport: asyncHandler(async (req, res) => {
     try {

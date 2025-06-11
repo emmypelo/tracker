@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import {  useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { fetchRegionsApi, addRegionApi } from "../../APIrequests/regionAPI";
+import {
+  fetchRegionsApi,
+  addRegionApi,
+  updateRegionApi,
+} from "../../APIrequests/regionAPI";
 import Modal from "../common/Modal";
 
 const AddRegion = () => {
@@ -17,6 +21,10 @@ const AddRegion = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const [editingRss, setEditingRss] = useState(null);
+  const [editRssValue, setEditRssValue] = useState("");
+  const [editingSupervisor, setEditingSupervisor] = useState(null);
+  const [editSupervisorValue, setEditSupervisorValue] = useState("");
 
   // Fetch regions
   const {
@@ -31,7 +39,7 @@ const AddRegion = () => {
   const regions = regionsData?.data?.regions || [];
 
   // Mutation for adding region
-  const mutation = useMutation({
+  const addMutation = useMutation({
     mutationKey: ["add-region"],
     mutationFn: (values) => addRegionApi(values),
     onSuccess: () => {
@@ -43,6 +51,39 @@ const AddRegion = () => {
     },
     onError: (error) => {
       setModalMessage(error.response?.data?.message || "An error occurred.");
+      setIsError(true);
+    },
+  });
+
+  // Mutation for updating RSS
+  const updateRssMutation = useMutation({
+    mutationKey: ["update-region-rss"],
+    mutationFn: ({ regionId, rss }) => updateRegionApi({ regionId, rss }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["regions"]);
+      setEditingRss(null);
+      setEditRssValue("");
+    },
+    onError: (error) => {
+      setModalMessage(error.response?.data?.message || "Failed to update RSS.");
+      setIsError(true);
+    },
+  });
+
+  // Mutation for updating Supervisor
+  const updateSupervisorMutation = useMutation({
+    mutationKey: ["update-region-supervisor"],
+    mutationFn: ({ regionId, supervisor }) =>
+      updateRegionApi({ regionId, supervisor }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["regions"]);
+      setEditingSupervisor(null);
+      setEditSupervisorValue("");
+    },
+    onError: (error) => {
+      setModalMessage(
+        error.response?.data?.message || "Failed to update supervisor."
+      );
       setIsError(true);
     },
   });
@@ -64,9 +105,50 @@ const AddRegion = () => {
         navigate("/signin", { state: { from: location } });
         return;
       }
-      await mutation.mutateAsync(values);
+      await addMutation.mutateAsync(values);
     },
   });
+
+  // Handle RSS edit
+  const handleEditRss = (regionId, currentRss) => {
+    setEditingRss(regionId);
+    setEditRssValue(currentRss || "");
+  };
+
+  const handleSaveRss = async (regionId) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
+    await updateRssMutation.mutateAsync({ regionId, rss: editRssValue });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRss(null);
+    setEditRssValue("");
+  };
+
+  // Handle Supervisor edit
+  const handleEditSupervisor = (regionId, currentSupervisor) => {
+    setEditingSupervisor(regionId);
+    setEditSupervisorValue(currentSupervisor || "");
+  };
+
+  const handleSaveSupervisor = async (regionId) => {
+    if (!isAuthenticated) {
+      navigate("/signin", { state: { from: location } });
+      return;
+    }
+    await updateSupervisorMutation.mutateAsync({
+      regionId,
+      supervisor: editSupervisorValue,
+    });
+  };
+
+  const handleCancelSupervisorEdit = () => {
+    setEditingSupervisor(null);
+    setEditSupervisorValue("");
+  };
 
   // Render error for form fields
   const renderError = (field) =>
@@ -90,17 +172,17 @@ const AddRegion = () => {
 
   // Loading skeleton component
   const LoadingSkeleton = () => (
-    <div className="animate-pulse space-y-4 p-4 sm:p-6">
-      {[...Array(5)].map((_, i) => (
-        <div
-          key={i}
-          className="flex items-center justify-between p-4 bg-gray-100 rounded-lg"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="h-4 bg-gray-300 rounded w-1/3 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+    <div className="animate-pulse space-y-4 p-6">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="bg-gray-100 rounded-xl p-6 space-y-3">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
+            <div className="flex-1 space-y-2">
+              <div className="h-5 bg-gray-300 rounded w-1/3"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+            <div className="h-8 bg-gray-300 rounded-full w-20"></div>
           </div>
-          <div className="h-6 bg-gray-300 rounded-full w-16 flex-shrink-0 ml-4"></div>
         </div>
       ))}
     </div>
@@ -113,12 +195,12 @@ const AddRegion = () => {
     }
 
     return (
-      <div className="p-4 sm:p-6">
+      <div className="p-6">
         {items.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+          <div className="text-center py-16">
+            <div className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center">
               <svg
-                className="w-12 h-12 text-gray-400"
+                className="w-16 h-16 text-blue-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -137,18 +219,19 @@ const AddRegion = () => {
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
               No regions yet
             </h3>
-            <p className="text-gray-500 mb-6 text-center">
-              Get started by creating your first region.
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              Get started by creating your first region to organize and manage
+              your stations effectively.
             </p>
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <svg
-                className="w-4 h-4 mr-2"
+                className="w-5 h-5 mr-2"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -160,26 +243,23 @@ const AddRegion = () => {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Add Region
+              Create First Region
             </button>
           </div>
         ) : (
-          <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {items.map((item, index) => (
               <div
                 key={item._id}
-                className="group bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:shadow-lg transition-all duration-200 transform hover:-translate-y-1"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="group bg-white border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden"
+                style={{ animationDelay: `${index * 100}ms` }}
               >
-                <Link
-                  to={`/manage/regions/${item._id}`}
-                  className="block p-4 sm:p-6"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center mb-2 min-w-0 flex-1">
-                      <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 sm:mr-4 flex-shrink-0">
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center flex-1 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4 flex-shrink-0 shadow-lg">
                         <svg
-                          className="w-5 h-5 text-white"
+                          className="w-6 h-6 text-white"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -199,20 +279,202 @@ const AddRegion = () => {
                         </svg>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="md:text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 ">
-                          {item.title}
-                        </h3>
+                        
+                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
+                            {item.title}
+                          </h3>
+                       
                       </div>
                     </div>
-                    <div className="flex align-middle self-center  justify-center space-x-1 flex-shrink-0 ml-2  ">
-                      <div className="flex items-center bg-gray-50 px-2 sm:px-2 py-1.5 rounded-full">
-                        <span className="text-xs sm:text-sm font-medium text-gray-600 whitespace-nowrap">
-                          {item.stations?.length || 0} Stations
+                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full ml-3 flex-shrink-0">
+                      <span className="text-sm font-medium text-gray-700 self-center">
+                        {item.stations?.length || 0} Stations
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* RSS Section with Edit Functionality */}
+                  <div className="mb-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-600">
+                          RSS:
                         </span>
+                        {editingRss === item._id ? (
+                          <div className="flex items-center space-x-2 flex-1">
+                            <input
+                              type="text"
+                              value={editRssValue}
+                              onChange={(e) => setEditRssValue(e.target.value)}
+                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-1/2"
+                              placeholder="Enter RSS name "
+                              autoFocus
+                            />
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleSaveRss(item._id)}
+                                disabled={updateRssMutation.isLoading}
+                                className="p-1 text-green-600 hover:bg-green-100 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                                title="Save"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                className="p-1 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                title="Cancel"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="text-sm text-gray-800 italic truncate">
+                              {item.rss || "Not set"}
+                            </span>
+                            <button
+                              onClick={() => handleEditRss(item._id, item.rss)}
+                              className="p-1 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex-shrink-0"
+                              title="Edit RSS"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                </Link>
+
+                  {/* Supervisor Section with Edit Functionality */}
+                  <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <span className="text-sm font-medium text-gray-600">
+                          Supervisor:
+                        </span>
+                        {editingSupervisor === item._id ? (
+                          <div className="flex items-center space-x-2 flex-1">
+                            <input
+                              type="text"
+                              value={editSupervisorValue}
+                              onChange={(e) =>
+                                setEditSupervisorValue(e.target.value)
+                              }
+                              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-12"
+                              placeholder="Enter supervisor name"
+                              autoFocus
+                            />
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleSaveSupervisor(item._id)}
+                                disabled={updateSupervisorMutation.isLoading}
+                                className="p-1 text-green-600 hover:bg-green-100 rounded-lg transition-colors duration-200 disabled:opacity-50"
+                                title="Save"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={handleCancelSupervisorEdit}
+                                className="p-1 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                                title="Cancel"
+                              >
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="text-sm text-gray-800 italic truncate">
+                              {item.supervisor || "Not assigned"}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleEditSupervisor(item._id, item.supervisor)
+                              }
+                              className="p-1 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 flex-shrink-0"
+                              title="Edit Supervisor"
+                            >
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -223,13 +485,13 @@ const AddRegion = () => {
 
   // Render add form
   const renderAddForm = () => (
-    <form className="p-4 sm:p-6 space-y-6" onSubmit={formik.handleSubmit}>
+    <form className="p-6 space-y-6" onSubmit={formik.handleSubmit}>
       <div>
         <label
           htmlFor="title"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-semibold text-gray-700 mb-2"
         >
-          Region Title
+          Region Title *
         </label>
         <input
           type="text"
@@ -237,10 +499,10 @@ const AddRegion = () => {
           id="title"
           {...formik.getFieldProps("title")}
           placeholder="Enter region title"
-          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
             formik.errors.title && formik.touched.title
               ? "border-red-300 bg-red-50"
-              : "border-gray-300 bg-white"
+              : "border-gray-300 bg-white hover:border-gray-400"
           }`}
         />
         {renderError("title")}
@@ -249,9 +511,9 @@ const AddRegion = () => {
       <div>
         <label
           htmlFor="rss"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-semibold text-gray-700 mb-2"
         >
-          RSS
+          RSS Name
         </label>
         <input
           type="text"
@@ -259,10 +521,10 @@ const AddRegion = () => {
           id="rss"
           {...formik.getFieldProps("rss")}
           placeholder="Enter RSS name"
-          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
             formik.errors.rss && formik.touched.rss
               ? "border-red-300 bg-red-50"
-              : "border-gray-300 bg-white"
+              : "border-gray-300 bg-white hover:border-gray-400"
           }`}
         />
         {renderError("rss")}
@@ -271,7 +533,7 @@ const AddRegion = () => {
       <div>
         <label
           htmlFor="supervisor"
-          className="block text-sm font-medium text-gray-700 mb-2"
+          className="block text-sm font-semibold text-gray-700 mb-2"
         >
           Supervisor
         </label>
@@ -281,30 +543,30 @@ const AddRegion = () => {
           id="supervisor"
           {...formik.getFieldProps("supervisor")}
           placeholder="Enter supervisor name"
-          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors duration-200 ${
+          className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 ${
             formik.errors.supervisor && formik.touched.supervisor
               ? "border-red-300 bg-red-50"
-              : "border-gray-300 bg-white"
+              : "border-gray-300 bg-white hover:border-gray-400"
           }`}
         />
         {renderError("supervisor")}
       </div>
 
-      <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-4">
+      <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-6">
         <button
           type="button"
           onClick={() => {
             setIsAddModalOpen(false);
             formik.resetForm();
           }}
-          className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+          className="flex-1 px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 transition-all duration-200"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={formik.isSubmitting}
-          className="flex-1 px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
+          className="flex-1 px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-xl hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           {formik.isSubmitting ? (
             <>
@@ -327,7 +589,7 @@ const AddRegion = () => {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Adding...
+              Creating...
             </>
           ) : (
             <>
@@ -344,7 +606,7 @@ const AddRegion = () => {
                   d="M12 4v16m8-8H4"
                 />
               </svg>
-              Add Region
+              Create Region
             </>
           )}
         </button>
@@ -353,53 +615,55 @@ const AddRegion = () => {
   );
 
   return (
-    <div className="min-h-[calc(100vh-6rem)] bg-gray-50 py-4 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6 sm:mb-8">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 sm:px-6 py-6 sm:py-8">
+        {/* Smaller Header */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white">
-                  Manage Regions
+                <h1 className="text-2xl font-bold text-white">
+                  Regions Management
                 </h1>
-                <p className="text-indigo-100 text-sm mt-1">
-                  Total: {regions.length} regions
+                <p className="text-blue-100 text-sm mt-1">
+                  {regions.length} regions •{" "}
+                  {regions.reduce(
+                    (total, region) => total + (region.stations?.length || 0),
+                    0
+                  )}{" "}
+                  stations
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="bg-white text-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors duration-200 flex items-center shadow-sm"
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-all duration-200 flex items-center shadow-md hover:shadow-lg"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Add Region</span>
-                  <span className="sm:hidden">Add</span>
-                </button>
-              </div>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                Add Region
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Enhanced Content */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
           {regionsError ? (
-            <div className="text-center py-12 px-4">
-              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+            <div className="text-center py-16 px-6">
+              <div className="w-20 h-20 mx-auto mb-6 bg-red-100 rounded-full flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-red-500"
+                  className="w-10 h-10 text-red-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -412,18 +676,19 @@ const AddRegion = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Something went wrong
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                Oops! Something went wrong
               </h3>
-              <p className="text-gray-500 mb-6 text-center">
-                Error loading regions. Please try again later.
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                We couldn't load your regions. Please check your connection and
+                try again.
               </p>
               <button
                 onClick={() => window.location.reload()}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors duration-200"
+                className="inline-flex items-center px-6 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <svg
-                  className="w-4 h-4 mr-2"
+                  className="w-5 h-5 mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -443,21 +708,21 @@ const AddRegion = () => {
           )}
         </div>
 
-        {/* Add Region Modal */}
+        {/* Enhanced Add Region Modal */}
         <Modal
           isOpen={isAddModalOpen}
           onClose={() => {
             setIsAddModalOpen(false);
             formik.resetForm();
           }}
-          title="Add New Region"
+          title="Create New Region"
           buttonText="Close"
         >
-          {mutation.isLoading ? (
-            <div className="text-center py-8">
+          {addMutation.isLoading ? (
+            <div className="text-center py-12">
               <div className="inline-flex items-center">
                 <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600"
+                  className="animate-spin -ml-1 mr-3 h-6 w-6 text-blue-600"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -475,8 +740,8 @@ const AddRegion = () => {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   ></path>
                 </svg>
-                <span className="text-indigo-600 font-medium">
-                  Adding region...
+                <span className="text-blue-600 font-semibold text-lg">
+                  Creating region...
                 </span>
               </div>
             </div>
@@ -485,25 +750,36 @@ const AddRegion = () => {
           )}
         </Modal>
 
-        {/* Success/Error Modal */}
+        {/* Enhanced Success/Error Modal */}
         <Modal
-          isOpen={mutation.isError || (!mutation.isLoading && !!modalMessage)}
+          isOpen={
+            (addMutation.isError ||
+              updateRssMutation.isError ||
+              updateSupervisorMutation.isError ||
+              (addMutation.isSuccess && !!modalMessage) ||
+              (updateRssMutation.isSuccess && !!modalMessage) ||
+              (updateSupervisorMutation.isSuccess && !!modalMessage)) &&
+            !!modalMessage
+          }
           onClose={() => {
             setModalMessage("");
             setIsError(false);
+            addMutation.reset();
+            updateRssMutation.reset();
+            updateSupervisorMutation.reset();
           }}
           title={isError ? "Error" : "Success"}
           buttonText="Close"
         >
-          <div className="text-center py-4">
+          <div className="text-center py-6">
             <div
-              className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+              className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${
                 isError ? "bg-red-100" : "bg-green-100"
               }`}
             >
               {isError ? (
                 <svg
-                  className="w-8 h-8 text-red-500"
+                  className="w-10 h-10 text-red-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -517,7 +793,7 @@ const AddRegion = () => {
                 </svg>
               ) : (
                 <svg
-                  className="w-8 h-8 text-green-500"
+                  className="w-10 h-10 text-green-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -532,7 +808,7 @@ const AddRegion = () => {
               )}
             </div>
             <p
-              className={`text-lg font-medium ${
+              className={`text-lg font-semibold ${
                 isError ? "text-red-600" : "text-green-600"
               }`}
             >

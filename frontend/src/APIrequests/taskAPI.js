@@ -1,8 +1,8 @@
 import axios from "axios";
-
 import { backendURL } from "../utils/backendURL.js";
 
 const baseUrl = `${backendURL}/tasks`;
+
 // ? create Task API
 export const createTaskApi = async (postData) => {
   const { data } = await axios.post(`${baseUrl}/create`, postData, {
@@ -11,8 +11,12 @@ export const createTaskApi = async (postData) => {
   return data;
 };
 
-export const fetchTasksApi = async (filters) => {
-  const { data } = await axios.get(`${baseUrl}`, { params: filters });
+export const fetchTasksApi = async (filters = {}) => {
+  // Filters already include pagination parameters (page, limit) when passed from the component
+  const { data } = await axios.get(`${baseUrl}`, {
+    params: filters,
+    withCredentials: true,
+  });
 
   return data;
 };
