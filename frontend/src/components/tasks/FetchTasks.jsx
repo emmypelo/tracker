@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteTaskApi,
@@ -211,6 +211,24 @@ const FetchTask = () => {
     page: 1,
     limit: 10,
   });
+
+  // Check URL for region filter parameter
+  const queryParams = new URLSearchParams(location.search);
+  const categoryParam = queryParams.get("category");
+  const subCategoryParam = queryParams.get("subCategory");
+
+  // Apply  filter from URL parameter on component mount
+
+  useEffect(() => {
+    if (categoryParam) {
+      setFilters((prev) => ({
+        ...prev,
+        category: categoryParam,
+        ...(subCategoryParam && { subCategory: subCategoryParam }),
+      }));
+    }
+  }, [categoryParam, subCategoryParam]);
+
   const [searchTerm, setSearchTerm] = useState("");
 
   const debouncedFetchTasks = useCallback(

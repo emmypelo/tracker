@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ import { MdOutlineCancel, MdDelete } from "react-icons/md";
 import { IoCheckmarkDoneSharp } from "react-icons/io5";
 import { Search, X, Phone, User } from "lucide-react";
 import debounce from "lodash/debounce";
+import React from "react";
 
 const StationManagement = () => {
   const navigate = useNavigate();
@@ -48,11 +50,25 @@ const StationManagement = () => {
     name: "",
     region: "",
   });
+
+  // Check URL for region filter parameter
+  const queryParams = new URLSearchParams(location.search);
+  const regionParam = queryParams.get("region");
+
+  // Apply region filter from URL parameter on component mount
+  React.useEffect(() => {
+    if (regionParam) {
+      setFilters((prev) => ({
+        ...prev,
+        region: regionParam,
+      }));
+    }
+  }, [regionParam]);
+
+  // Filter states
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Debounced search
 
-  // ...other imports
 
   // Debounced search
   const debouncedFetchStations = useMemo(
@@ -516,7 +532,7 @@ const StationManagement = () => {
                               {station.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-semibold text-gray-900 truncate">
+                              <h3 className="font-semibold text-gray-900 ">
                                 {station.name}
                               </h3>
                             </div>
@@ -530,14 +546,12 @@ const StationManagement = () => {
                           <div className="flex items-center text-sm text-gray-600">
                             <User className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
                             <span className="font-medium">Manager:</span>
-                            <span className="ml-1 truncate">
-                              {station.managerName}
-                            </span>
+                            <span className="ml-1 ">{station.managerName}</span>
                           </div>
                           <div className="flex items-center text-sm text-gray-600">
                             <Phone className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
                             <span className="font-medium">Phone:</span>
-                            <span className="ml-1 truncate">
+                            <span className="ml-1 ">
                               {station.managerPhone}
                             </span>
                           </div>

@@ -1,6 +1,8 @@
+"use client";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {  useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -166,7 +168,7 @@ const AddRegion = () => {
             clipRule="evenodd"
           />
         </svg>
-        <span className="truncate">{formik.errors[field]}</span>
+        <span className="">{formik.errors[field]}</span>
       </div>
     );
 
@@ -254,7 +256,7 @@ const AddRegion = () => {
                 className="group bg-white border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="p-6">
+                <div className="p-2 md:p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center flex-1 min-w-0">
                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4 flex-shrink-0 shadow-lg">
@@ -279,16 +281,16 @@ const AddRegion = () => {
                         </svg>
                       </div>
                       <div className="min-w-0 flex-1">
-                        
-                          <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
-                            {item.title}
-                          </h3>
-                       
+                        <h3 className=" text-gray-900 group-hover:text-blue-600 transition-colors duration-200 ">
+                          {item.title}
+                        </h3>
                       </div>
                     </div>
-                    <div className="flex items-center bg-gray-50 px-3 py-1.5 rounded-full ml-3 flex-shrink-0">
-                      <span className="text-sm font-medium text-gray-700 self-center">
-                        {item.stations?.length || 0} Stations
+                    <div className="flex items-center bg-gray-50  py-1.5 rounded-full ml-3 relative">
+                      <span className="text-sm font-medium text-gray-700 self-center ">
+                        <Link to={`/manage/stations/?region=${item._id}`}>
+                          {item.stations?.length || 0} Stations
+                        </Link>
                       </span>
                     </div>
                   </div>
@@ -354,7 +356,7 @@ const AddRegion = () => {
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="text-sm text-gray-800 italic truncate">
+                            <span className="text-sm text-gray-800 italic ">
                               {item.rss || "Not set"}
                             </span>
                             <button
@@ -445,7 +447,7 @@ const AddRegion = () => {
                           </div>
                         ) : (
                           <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <span className="text-sm text-gray-800 italic truncate">
+                            <span className="text-sm text-gray-800 italic ">
                               {item.supervisor || "Not assigned"}
                             </span>
                             <button

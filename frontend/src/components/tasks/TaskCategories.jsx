@@ -220,7 +220,7 @@ const TaskCategories = () => {
                         </svg>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 truncate">
+                        <h3 className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-200 ">
                           {activeView === "categories"
                             ? item.category
                             : item.title}
@@ -383,7 +383,7 @@ const TaskCategories = () => {
           <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-6">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div className="min-w-0">
-                <h1 className="text-xl lg:text-2xl font-bold text-white mb-1 truncate">
+                <h1 className="text-xl lg:text-2xl font-bold text-white mb-1 ">
                   Task Management
                 </h1>
                 <p className="text-indigo-100 text-sm capitalize">
