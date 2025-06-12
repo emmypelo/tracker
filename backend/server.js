@@ -28,8 +28,8 @@ app.use(express.json());
 const corsOptions = {
   // origin:"https://tracker.pingbyleo.space",
   origin:
-    process.env.MODE === "production"
-      ? ["https://tracker.pingbyleo.space", "https://pingbyleo.space"]
+    process.env.MODE || process.env.NODE_ENV === "production"
+      ? ["https://tracker.pingbyleo.space", "https://www.pingbyleo.space"]
       : ["http://localhost:5173"],
 
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],

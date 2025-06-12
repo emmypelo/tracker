@@ -12,7 +12,7 @@
   "private": true,
   "proxy": [
     "https://tracker.pingbyleo.space",
-    "https://pingbyleo.space",
+    "https://www.pingbyleo.space",
     "http://localhost:5173"
   ],
   "description": "Frontend for PingByLeo Space",
