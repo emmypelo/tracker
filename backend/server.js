@@ -29,8 +29,8 @@ const corsOptions = {
   // origin:"https://tracker.pingbyleo.space",
   origin:
     process.env.MODE || process.env.NODE_ENV === "production"
-      ? ["https://tracker.pingbyleo.space", "https://www.pingbyleo.space"]
-      : ["http://localhost:5173"],
+      ? "https://tracker.pingbyleo.space" || "https://www.pingbyleo.space"
+      : "http://localhost:5173",
 
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
